@@ -6,7 +6,11 @@ A browser ski game set in a 1:1 recreation of **Arosa Lenzerheide** and **Davos 
 - Real pistes, piste numbers, lifts, pylons, stations, buildings and mountain restaurants from OpenStreetMap (`swiss-ski/osmdata.js`, `swiss-ski/buildings.js`)
 - Three.js renderer, no build step
 
-## Play
+## Play online
+
+**https://maxnd1.github.io/arosa-davos-ski/** — runs in Chrome, Edge or Firefox on a computer (keyboard needed). The first load downloads about 10 MB and takes 20–30 s.
+
+## Play locally
 
 Requires [Node.js](https://nodejs.org/). From the repository folder:
 
