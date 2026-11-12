@@ -88,7 +88,7 @@
 <div id="prompt" class="panel"></div>
 <div id="msg" class="panel"></div>
 <div id="help" class="panel">
-  <b>A</b>/<b>D</b> steer · <b>W</b> tuck / skate · <b>S</b> snowplough / hockey stop · <b>Space</b> jump · <b>E</b> ride lift · <b>F</b> fast-forward lift · <b>T</b> teleport · <b>M</b> map · <b>K</b> skis on/off · <b>C</b> camera · <b>PgUp</b>/<b>PgDn</b> zoom · <b>Esc</b> menu
+  <b>A</b>/<b>D</b> steer · <b>W</b> tuck / skate · <b>S</b> pizza (snowplough) · <b>Q</b> hockey stop · <b>Space</b> jump · <b>E</b> ride lift · <b>F</b> fast-forward lift · <b>T</b> teleport · <b>M</b> map · <b>K</b> skis on/off · <b>R</b> get up · <b>C</b> camera · <b>PgUp</b>/<b>PgDn</b> zoom · <b>Esc</b> menu
 </div>
 <div id="tele" class="overlay"><div class="inner">
   <h2>Teleport</h2><div style="opacity:.7">Real lifts and mountain restaurants from OpenStreetMap · Esc to close</div>
@@ -111,10 +111,12 @@
     <table class="keys">
       <tr><td><b>A</b> / <b>D</b></td><td>Roll onto your edges and turn — hold longer for a tighter carve</td></tr>
       <tr><td><b>W</b></td><td>Tuck at speed · skate and pole when slow</td></tr>
-      <tr><td><b>S</b></td><td>Snowplough when slow · hockey stop at speed</td></tr>
+      <tr><td><b>S</b></td><td>Pizza / snowplough: tips together, gentle braking at any speed, steer with A/D</td></tr>
+      <tr><td><b>Q</b></td><td>Hockey stop: skis thrown across, hard stop · hold A or D with Q to choose the side</td></tr>
       <tr><td><b>Space</b></td><td>Jump</td></tr>
       <tr><td><b>E</b> / <b>F</b></td><td>Ride the lift at a valley station · fast-forward the ride</td></tr>
       <tr><td><b>K</b></td><td>Take your skis off and walk (W, Shift to jog) · put them back on</td></tr>
+      <tr><td><b>R</b></td><td>After a fall: get back up with your skis on</td></tr>
       <tr><td><b>T</b> / <b>M</b></td><td>Teleport list · zoomable map (scroll, drag, click to drop in)</td></tr>
       <tr><td><b>C</b></td><td>Camera: follow · first person · high</td></tr>
       <tr><td><b>Page Up</b> / <b>Page Down</b> · wheel</td><td>Zoom the camera · drag the mouse to look around</td></tr>
@@ -1766,7 +1768,7 @@ function applyPose() {
 // ================= game state =================
 const S = { p: new THREE.Vector3(), v: new THREE.Vector3(), yaw: 0, grounded: true, mode: 'ski', lift: null, liftS: 0, crashT: 0, steer: 0, maxSpd: 0, tuck: 0, skid: 0, yawRate: 0, edge: 0, latAcc: 0, hockey: false, onFoot: false, walkSpeed: 0, walkPh: 0, airT: 0, land: 0, skate: 0, plant: [0, 0], lastSteerSign: 0, stopSide: 1, prev: new THREE.Vector3() };
 const keys = {};
-window.__game = { S, scene, renderer, camera, hAt, normalAt, lifts, buildings, pistes, restaurants, placeAt: (...a) => placeAt(...a), step: dt => step(dt), keys, tryLift: () => tryLift(), setNear: l => nearLift = l };
+window.__game = { S, scene, renderer, camera, crash: w => crash(w), rag: () => RAG, getUp: () => getUp(), hAt, normalAt, lifts, buildings, pistes, restaurants, placeAt: (...a) => placeAt(...a), step: dt => step(dt), keys, tryLift: () => tryLift(), setNear: l => nearLift = l };
 addEventListener('keydown', e => {
   if (e.repeat) return;
   if (e.code === 'Escape') {
@@ -1787,6 +1789,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyM') openMap();
   if (e.code === 'KeyC') camMode = (camMode + 1) % 3;
   if (e.code === 'KeyK') toggleSkis();
+  if (e.code === 'KeyR') getUp();
   if (e.code === 'KeyE') tryLift();
   if (e.code === 'Space') { e.preventDefault(); jump(); }
 });
@@ -1799,6 +1802,7 @@ function downhillYaw(x, z) { const n = normalBase(x, z); return Math.atan2(n.x, 
 function placeAt(x, z, yaw) {
   S.p.set(x, hAt(x, z), z); S.prev.copy(S.p); S.v.set(0, 0, 0); S.yaw = yaw ?? downhillYaw(x, z); S.mode = 'ski'; S.grounded = true; S.lift = null;
   S.steer = 0; S.yawRate = 0; S.walkSpeed = 0; S.edge = 0; S.latAcc = 0; S.hockey = false;
+  if (RAG.active) endRagdoll();
   camDir.set(Math.sin(S.yaw), 0, Math.cos(S.yaw)); updateNear(x, z, true); trackBreak();
 }
 function teleportTop(l) {
@@ -1829,11 +1833,7 @@ const G = 9.81, tmpF = new THREE.Vector3(), tmpL = new THREE.Vector3();
 const PHYS = { hz: 240 };
 const liftPt = new THREE.Vector3(), liftDir = new THREE.Vector3();
 function step(dt) {
-  if (S.mode === 'crash') {
-    S.crashT -= dt; S.v.multiplyScalar(Math.exp(-2.5 * dt)); S.p.addScaledVector(S.v, dt); S.p.y = hAt(S.p.x, S.p.z);
-    if (S.crashT <= 0) { S.mode = 'ski'; S.v.set(0, 0, 0); S.yaw = downhillYaw(S.p.x, S.p.z); }
-    return;
-  }
+  if (S.mode === 'crash') { if (RAG.active) ragStep(dt); return; }
   if (S.mode === 'lift') {
     const l = S.lift, sp = l.spec.speed * (keys.KeyF ? 8 : 1);
     S.liftS += sp * dt;
@@ -1846,7 +1846,7 @@ function step(dt) {
     return;
   }
   const steerIn = (keys.KeyA || keys.ArrowLeft ? 1 : 0) - (keys.KeyD || keys.ArrowRight ? 1 : 0);
-  const brake = keys.KeyS || keys.ArrowDown, tuck = keys.KeyW || keys.ArrowUp;
+  const brake = keys.KeyS || keys.ArrowDown, tuck = keys.KeyW || keys.ArrowUp, stopKey = keys.KeyQ;
   // smooth steering: the input eases in and out instead of snapping
   S.steer += (steerIn - S.steer) * Math.min(1, dt * 4.5);
   if (!inMap(S.p.x, S.p.z)) { S.p.x = clamp(S.p.x, -WW / 2 + 60, WW / 2 - 60); S.p.z = clamp(S.p.z, -HH / 2 + 60, HH / 2 - 60); S.v.set(0, 0, 0); }
@@ -1858,7 +1858,7 @@ function step(dt) {
   // edges are rolled on progressively (~0.5 s to full edge) — turns have to be built, they don't snap
   S.edge += clamp(steerIn - S.edge, -dt * 2.2, dt * 2.2);
   if (steerIn) S.lastSteerSign = steerIn;
-  const hockey = S.grounded && brake && spd > 5;
+  const hockey = S.grounded && stopKey && spd > 2.5;       // Q: hockey stop · S: pizza (snowplough)
   let wantYawRate;
   if (!S.grounded) wantYawRate = S.steer * 2.2;                     // spin in the air
   else {
@@ -1869,7 +1869,7 @@ function step(dt) {
     const lim = aMax / Math.max(spd, 0.5);
     let w = carve; if (Math.abs(w) > lim) w = Math.sign(w) * (lim + (Math.abs(w) - lim) * 0.25); // asking for more: the skis skid
     const t = sstep(2, 7, spd);
-    wantYawRate = pivot * (1 - t) + w * t;
+    wantYawRate = (pivot * (1 - t) + w * t) * (brake ? 0.55 : 1);  // in a wedge you steer by weighting one ski: slower turns
   }
   S.yawRate += (wantYawRate - S.yawRate) * Math.min(1, dt * 5);
   if (!hockey) S.yaw += S.yawRate * dt;
@@ -1880,7 +1880,7 @@ function step(dt) {
     if (hockey) { // hockey stop: pivot both skis ~85° across the direction of travel and dig the edges in
       const velYaw = Math.atan2(S.v.x, S.v.z);
       let rel = Math.atan2(Math.sin(S.yaw - velYaw), Math.cos(S.yaw - velYaw));
-      if (!S.hockey) S.stopSide = Math.abs(rel) > 0.15 ? Math.sign(rel) : (S.lastSteerSign || 1);
+      if (!S.hockey) S.stopSide = steerIn ? steerIn : Math.abs(rel) > 0.15 ? Math.sign(rel) : (S.lastSteerSign || 1); // Q + A/D picks the side
       const want = velYaw + S.stopSide * 1.48; let d = Math.atan2(Math.sin(want - S.yaw), Math.cos(want - S.yaw));
       S.yaw += clamp(d * 9, -6.5, 6.5) * dt; S.yawRate = 0;
     }
@@ -1894,7 +1894,7 @@ function step(dt) {
       if (Math.abs(gf) < 0.1 * G * n.y && Math.abs(gl) < 0.95 * G * n.y) { S.v.set(0, 0, 0); S.p.y = hAt(S.p.x, S.p.z); S.skid = 0; collide(); return; }
     }
     let vf = S.v.dot(tmpF), vl = S.v.dot(tmpL);
-    const grip = hockey ? 2.2 : brake ? 3.5 : (5 + 9 * Math.abs(S.edge)) * groomK; // more edge = more hold
+    const grip = hockey ? 2.2 : brake ? 6 : (5 + 9 * Math.abs(S.edge)) * groomK; // more edge = more hold
     const vl0 = vl; vl *= Math.exp(-grip * dt);
     const eff = hockey ? 0.04 : brake ? 0.1 : 0.85;                  // carving keeps speed, skidding scrubs it
     vf = Math.sign(vf || 1) * Math.sqrt(vf * vf + eff * (vl0 * vl0 - vl * vl));
@@ -1903,10 +1903,10 @@ function step(dt) {
     const s = S.v.length();
     if (tuck && s < 9) S.v.addScaledVector(tmpF, 2.4 * dt);
     const across = s > 0.1 ? Math.abs(vl) / s : 0;
-    const mu = hockey ? 0.06 + 0.58 * across : brake ? 0.45 : 0.06 + (1 - groomK) * 0.08, k = 0.0042 - S.tuck * 0.0018;
+    const mu = hockey ? 0.06 + 0.58 * across : brake ? 0.06 + 0.26 * clamp(1.2 - s / 25, 0.35, 1) : 0.06 + (1 - groomK) * 0.08, k = 0.0042 - S.tuck * 0.0018;
     const decel = mu * G * n.y + k * s * s;
     if (s > 1e-4) S.v.multiplyScalar(Math.max(0, 1 - decel * dt / s));
-    S.skid = Math.abs(vl0) * 0.9 + (hockey ? s * 0.9 : brake ? s * 0.4 : 0);
+    S.skid = Math.abs(vl0) * 0.9 + (hockey ? s * 0.9 : brake ? s * 0.18 : 0);
     const py = S.p.y;
     S.p.addScaledVector(S.v, dt);
     const gy = hAt(S.p.x, S.p.z), yv = py + S.v.y * dt;
@@ -1943,11 +1943,17 @@ function collide() {
   for (let j = cj - 1; j <= cj + 1; j++) for (let i = ci - 1; i <= ci + 1; i++) {
     const t = treeAt(i, j); if (!t) continue;
     if (Math.hypot(t.x - S.p.x, t.z - S.p.z) < 0.9 * t.s + 0.3 && S.p.y < t.y + 12 * t.s) {
-      if (!S.onFoot && S.v.length() > 2) crash('Tree!'); else { S.p.copy(S.prev); S.v.set(0, 0, 0); }
+      if (!S.onFoot && S.v.length() > 2) { S.p.copy(S.prev); S.v.multiplyScalar(-0.2); crash('Tree!'); } else { S.p.copy(S.prev); S.v.set(0, 0, 0); }
     }
   }
 }
-function crash(why) { if (S.mode === 'crash') return; S.mode = 'crash'; S.crashT = 2.2; S.v.multiplyScalar(0.35); S.v.y = 0; S.grounded = true; S.yawRate = 0; flash(why, 1.6); burst(90); trackBreak(); }
+function crash(why) {
+  if (S.mode === 'crash') return;
+  const v = S.v.clone();
+  S.mode = 'crash'; S.grounded = true; S.yawRate = 0; S.hockey = false; S.edge = 0;
+  flash(why, 1.6); burst(60); trackBreak();
+  startRagdoll(v);
+}
 
 // ---------- on foot (skis off) ----------
 // W walk forward (hold Shift to jog), S step back, A/D turn. Steep slopes slow you down; you can't slide.
@@ -1974,6 +1980,183 @@ function toggleSkis() {
   flash(S.onFoot ? 'Skis off — W to walk, Shift to jog, K to put them back on' : 'Skis on', 1.8);
 }
 
+// ================= ragdoll =================
+// A fall turns the skier into a ragdoll: 15 joint particles taken from the animated skeleton at the moment of
+// impact, held together by distance constraints (Verlet integration, 240 Hz), tumbling with the speed they had
+// and sliding over the real terrain with snow friction. Skis and poles release from the bindings / hands and
+// become loose sticks with ski-brake friction. Press R to get back up.
+const RAG = { active: false, t: 0, settled: 0, P: [], prev: [], rad: [], cons: [], loose: [], vis: null, impactCd: 0 };
+const _rv = new THREE.Vector3(), _rv2 = new THREE.Vector3(), _rv3 = new THREE.Vector3(), _rm = new THREE.Matrix4(), _rq = new THREE.Quaternion(), _rq2 = new THREE.Quaternion();
+const J = { head: 0, neck: 1, pelvis: 2, lSh: 3, lEl: 4, lHa: 5, rSh: 6, rEl: 7, rHa: 8, lHip: 9, lKn: 10, lAn: 11, rHip: 12, rKn: 13, rAn: 14 };
+function ragdollVisuals() { // meshes cloned from the skier (same materials), re-posed each frame from the particles
+  if (RAG.vis) return RAG.vis;
+  const grp = new THREE.Group(); grp.visible = false; scene.add(grp);
+  const meshesOf = (o, filter = () => true) => o.children.filter(c => c.isMesh && filter(c)).map(c => c.clone());
+  const part = (meshes) => { const g = new THREE.Group(); meshes.forEach(m => { m.castShadow = true; g.add(m); }); grp.add(g); return g; };
+  const vis = {
+    grp,
+    torso: part(meshesOf(rig.spine)),                                  // jacket, collar, backpack (origin = spine root)
+    hips: part(meshesOf(rig.pelvis)),
+    head: part(meshesOf(rig.neck)),
+    upper: rig.arms.map(a => part(meshesOf(a.shoulder))),              // deltoid + upper arm, hanging along -y from the shoulder
+    fore: rig.arms.map(a => part(meshesOf(a.elbow))),
+    hand: rig.arms.map(a => part(meshesOf(a.hand))),
+    thigh: rig.legs.map(l => part(meshesOf(l.hip))),
+    shin: rig.legs.map(l => part(meshesOf(l.knee))),
+    boot: rig.legs.map(l => part(meshesOf(l.ankle))),
+    ski: rig.legs.map(l => { const g = l.skiG.clone(true); g.traverse(o => o.castShadow = true); grp.add(g); return g; }),
+    pole: rig.arms.map(a => { const g = a.pole.clone(true); g.traverse(o => o.castShadow = true); grp.add(g); return g; }),
+  };
+  RAG.vis = vis; return vis;
+}
+function startRagdoll(impactVel) {
+  ragdollVisuals();
+  rig.root.updateMatrixWorld(true);
+  const wp = (o, x = 0, y = 0, z = 0) => o.localToWorld(new THREE.Vector3(x, y, z));
+  const pts = [wp(rig.neck, 0, 0.13, 0.01), wp(rig.neck), wp(rig.pelvis), wp(rig.arms[0].shoulder), wp(rig.arms[0].elbow), wp(rig.arms[0].hand), wp(rig.arms[1].shoulder), wp(rig.arms[1].elbow), wp(rig.arms[1].hand),
+    wp(rig.legs[0].hip), wp(rig.legs[0].knee), wp(rig.legs[0].ankle), wp(rig.legs[1].hip), wp(rig.legs[1].knee), wp(rig.legs[1].ankle)];
+  RAG.rad = [0.13, 0.09, 0.14, 0.08, 0.06, 0.05, 0.08, 0.06, 0.05, 0.09, 0.07, 0.08, 0.09, 0.07, 0.08];
+  // initial velocity: the skier's own velocity plus a tumble (pitching forward over the skis, with some roll)
+  const v = impactVel.clone(), spd = v.length();
+  const com = pts.reduce((a, p) => a.add(p), new THREE.Vector3()).multiplyScalar(1 / pts.length);
+  const vdir = spd > 0.5 ? v.clone().setY(0).normalize() : new THREE.Vector3(Math.sin(S.yaw), 0, Math.cos(S.yaw));
+  const side = new THREE.Vector3(vdir.z, 0, -vdir.x);
+  const omega = new THREE.Vector3().crossVectors(_up, vdir).multiplyScalar(Math.min(7, 1.5 + spd * 0.28) * (0.8 + Math.random() * 0.4))
+    .addScaledVector(vdir, (Math.random() - 0.5) * Math.min(5, spd * 0.25));
+  const h = 1 / PHYS.hz;
+  RAG.P = pts; RAG.prev = pts.map(p => { const r = p.clone().sub(com), vi = v.clone().add(new THREE.Vector3().crossVectors(omega, r)); vi.y += 0.6; return p.clone().addScaledVector(vi, -h); });
+  const c = (a, b, k = 1, min = 0) => RAG.cons.push([a, b, pts[a].distanceTo(pts[b]), k, min]);
+  RAG.cons = [];
+  c(J.head, J.neck); c(J.neck, J.pelvis); c(J.neck, J.lSh); c(J.neck, J.rSh); c(J.lSh, J.rSh); c(J.pelvis, J.lHip); c(J.pelvis, J.rHip); c(J.lHip, J.rHip);
+  c(J.lSh, J.lEl); c(J.lEl, J.lHa); c(J.rSh, J.rEl); c(J.rEl, J.rHa); c(J.lHip, J.lKn); c(J.lKn, J.lAn); c(J.rHip, J.rKn); c(J.rKn, J.rAn);
+  c(J.neck, J.lHip, 0.9); c(J.neck, J.rHip, 0.9); c(J.lSh, J.pelvis, 0.9); c(J.rSh, J.pelvis, 0.9); c(J.lSh, J.lHip, 0.8); c(J.rSh, J.rHip, 0.8); // stiff torso
+  c(J.head, J.lSh, 0.35); c(J.head, J.rSh, 0.35);                                                              // neck muscles
+  // joint limits (minimum distances): knees and elbows can't fold flat, head can't fold into the hips
+  RAG.cons.push([J.lHip, J.lAn, 0, 1, 0.32], [J.rHip, J.rAn, 0, 1, 0.32], [J.lSh, J.lHa, 0, 1, 0.22], [J.rSh, J.rHa, 0, 1, 0.22], [J.head, J.pelvis, 0, 1, 0.55], [J.lKn, J.rKn, 0, 1, 0.12], [J.lAn, J.rAn, 0, 1, 0.12]);
+  // skis and poles come off and fly / slide on their own
+  RAG.loose = [];
+  rig.legs.forEach((l, i) => {
+    const tip = wp(l.skiG, 0, 0.02, 0.86), tail = wp(l.skiG, 0, 0.02, -0.8);
+    const lv = v.clone().multiplyScalar(0.75 + Math.random() * 0.2).addScaledVector(side, (i ? -1 : 1) * (0.8 + Math.random() * 1.6)); lv.y += 1 + Math.random() * 2;
+    const spin = (Math.random() - 0.5) * 10;
+    RAG.loose.push({ kind: 'ski', i, a: tip, b: tail, pa: tip.clone().addScaledVector(lv, -h).addScaledVector(side, spin * h * 0.4), pb: tail.clone().addScaledVector(lv, -h).addScaledVector(side, -spin * h * 0.4), len: 1.66, r: 0.03, mu: 1.1, roll: 0, rollV: (Math.random() - 0.5) * 14 });
+  });
+  rig.arms.forEach((a, i) => {
+    const grip = wp(a.pole), tip = wp(a.pole, 0, -1.15, 0);
+    const lv = v.clone().multiplyScalar(0.6 + Math.random() * 0.3).addScaledVector(side, (i ? -1 : 1) * Math.random() * 2); lv.y += 1.5 * Math.random();
+    RAG.loose.push({ kind: 'pole', i, a: grip, b: tip, pa: grip.clone().addScaledVector(lv, -h), pb: tip.clone().addScaledVector(lv, -h).addScaledVector(vdir, 0.02), len: 1.15, r: 0.02, mu: 0.6 });
+  });
+  RAG.active = true; RAG.t = 0; RAG.settled = 0; RAG.impactCd = 0;
+  RAG.vis.grp.visible = true; rig.root.visible = false;
+}
+function ragContact(p, prev, r, mu) { // particle vs. snow surface: push out, kill the inward speed, Coulomb friction along the slope
+  const gy = hAt(p.x, p.z) + r;
+  if (p.y >= gy) return 0;
+  const n = normalAt(p.x, p.z, _rv3, 1.5);
+  const vel = _rv.copy(p).sub(prev);
+  p.y = gy;
+  const vn = vel.dot(n);
+  if (vn < 0) {
+    vel.addScaledVector(n, -vn * 1.12);                                   // tiny bounce
+    const vt = _rv2.copy(vel).addScaledVector(n, -vel.dot(n)), vtl = vt.length();
+    if (vtl > 1e-6) vel.addScaledVector(vt, -Math.min(1, mu * -vn / vtl)); // friction impulse
+    vel.multiplyScalar(0.992);                                           // ploughing through the snow
+  }
+  prev.copy(p).sub(vel);
+  return -vn;
+}
+function ragStep(dt) {
+  RAG.t += dt; RAG.impactCd -= dt;
+  const g = -G * dt * dt, P = RAG.P, prev = RAG.prev;
+  let maxV = 0, hit = 0;
+  for (let i = 0; i < P.length; i++) { // integrate
+    const p = P[i], q = prev[i], vx = (p.x - q.x) * 0.999, vy = (p.y - q.y) * 0.999, vz = (p.z - q.z) * 0.999;
+    q.copy(p); p.x += vx; p.y += vy + g; p.z += vz;
+  }
+  for (const L of RAG.loose) for (const [p, q] of [[L.a, L.pa], [L.b, L.pb]]) { const vx = p.x - q.x, vy = p.y - q.y, vz = p.z - q.z; q.copy(p); p.x += vx; p.y += vy + g; p.z += vz; }
+  for (let it = 0; it < 8; it++) { // satisfy constraints, then the ground
+    for (const [a, b, rest, k, min] of RAG.cons) {
+      const pa = P[a], pb = P[b], d = _rv.copy(pb).sub(pa), len = d.length() || 1e-6;
+      let diff;
+      if (min) { if (len >= min) continue; diff = (len - min) / len; } else diff = (len - rest) / len;
+      d.multiplyScalar(0.5 * k * diff); pa.add(d); pb.sub(d);
+    }
+    for (const L of RAG.loose) { const d = _rv.copy(L.b).sub(L.a), len = d.length() || 1e-6; d.multiplyScalar(0.5 * (len - L.len) / len); L.a.add(d); L.b.sub(d); }
+    for (let i = 0; i < P.length; i++) hit = Math.max(hit, ragContact(P[i], prev[i], RAG.rad[i], 0.85)); // clothes on snow, digging in
+    for (const L of RAG.loose) { ragContact(L.a, L.pa, L.r, L.mu); ragContact(L.b, L.pb, L.r, L.mu); }
+  }
+  for (let i = 0; i < P.length; i++) maxV = Math.max(maxV, P[i].distanceTo(prev[i]) / dt);
+  for (const L of RAG.loose) if (L.kind === 'ski') { const air = L.a.y > hAt(L.a.x, L.a.z) + 0.08 && L.b.y > hAt(L.b.x, L.b.z) + 0.08; L.rollV *= air ? 0.999 : 0.9; L.roll += L.rollV * dt; if (!air) L.roll += (Math.round(L.roll / Math.PI) * Math.PI - L.roll) * Math.min(1, dt * 6); }
+  if (hit > 2.5 && RAG.impactCd <= 0) { RAG.impactCd = 0.25; const pp = P[J.pelvis]; puff(pp.x, pp.y, pp.z, Math.min(40, hit * 8)); }
+  RAG.settled = maxV < 0.35 ? RAG.settled + dt : 0;
+  // the camera and minimap follow the body
+  const pel = P[J.pelvis]; S.p.set(pel.x, hAt(pel.x, pel.z), pel.z); S.v.copy(pel).sub(prev[J.pelvis]).multiplyScalar(1 / dt);
+  if ((RAG.settled > 0.4 || RAG.t > 3.5) && !RAG.done) { RAG.done = true; showPromptR(); }
+}
+function showPromptR() { $('prompt').style.display = 'block'; $('prompt').innerHTML = 'Press <b>R</b> to get back up'; }
+const _bx = new THREE.Vector3(), _by = new THREE.Vector3(), _bz = new THREE.Vector3();
+function placeBetween(obj, a, b, dirAxis /* 'y-' or 'z' */, sideRef) {
+  // put an object whose geometry runs along local -y (limbs) or +z (skis) from point a towards b
+  const d = _rv.copy(b).sub(a); const len = d.length() || 1e-6; d.multiplyScalar(1 / len);
+  if (dirAxis === 'z') {
+    _bz.copy(d); _bx.copy(sideRef || _up).cross(_bz); if (_bx.lengthSq() < 1e-6) _bx.set(1, 0, 0); _bx.normalize(); _by.crossVectors(_bz, _bx);
+  } else {
+    _by.copy(d).negate(); _bx.copy(sideRef || _rv2.set(1, 0, 0)); _bx.addScaledVector(_by, -_bx.dot(_by)); if (_bx.lengthSq() < 1e-6) _bx.set(0, 0, 1).cross(_by); _bx.normalize(); _bz.crossVectors(_bx, _by);
+  }
+  _rm.makeBasis(_bx, _by, _bz); obj.quaternion.setFromRotationMatrix(_rm); obj.position.copy(a);
+}
+function ragRender() {
+  const V = RAG.vis, P = RAG.P;
+  const across = _rv3.copy(P[J.lHip]).sub(P[J.rHip]).normalize();       // body's left-right axis
+  // torso & hips: up = pelvis->neck, left = right hip -> left hip
+  const up = _rv.copy(P[J.neck]).sub(P[J.pelvis]).normalize();
+  const x = across.clone().addScaledVector(up, -across.dot(up)).normalize(), z = new THREE.Vector3().crossVectors(x, up);
+  _rm.makeBasis(x, up, z); V.torso.quaternion.setFromRotationMatrix(_rm); V.hips.quaternion.copy(V.torso.quaternion);
+  V.hips.position.copy(P[J.pelvis]); V.torso.position.copy(P[J.pelvis]).addScaledVector(up, 0.06);
+  // head: up = neck->head
+  const hu = _rv2.copy(P[J.head]).sub(P[J.neck]).normalize(), hx = x.clone().addScaledVector(hu, -x.dot(hu)).normalize(), hz = new THREE.Vector3().crossVectors(hx, hu);
+  _rm.makeBasis(hx, hu, hz); V.head.quaternion.setFromRotationMatrix(_rm); V.head.position.copy(P[J.neck]);
+  // limbs
+  [[J.lSh, J.lEl, J.lHa], [J.rSh, J.rEl, J.rHa]].forEach(([s, e, h], i) => { placeBetween(V.upper[i], P[s], P[e], 'y-', x); placeBetween(V.fore[i], P[e], P[h], 'y-', x); placeBetween(V.hand[i], P[h], _rv2.copy(P[h]).addScaledVector(_rv3.copy(P[h]).sub(P[e]).normalize(), 0.1), 'y-', x); });
+  [[J.lHip, J.lKn, J.lAn], [J.rHip, J.rKn, J.rAn]].forEach(([hp, k, a], i) => { placeBetween(V.thigh[i], P[hp], P[k], 'y-', x); placeBetween(V.shin[i], P[k], P[a], 'y-', x); placeBetween(V.boot[i], P[a], _rv2.copy(P[a]).addScaledVector(_rv3.copy(P[a]).sub(P[k]).normalize(), 0.1), 'y-', x); });
+  // loose skis and poles
+  for (const L of RAG.loose) {
+    if (L.kind === 'ski') {
+      const o = V.ski[L.i]; placeBetween(o, L.b, L.a, 'z', _up); o.position.copy(L.a).add(L.b).multiplyScalar(0.5);
+      o.quaternion.multiply(_rq.setFromAxisAngle(_bz.set(0, 0, 1), L.roll)); o.position.y -= 0.01;
+    } else { const o = V.pole[L.i]; placeBetween(o, L.a, L.b, 'y-', _up); }
+  }
+  // keep the (hidden) rig where the body is, so the camera follows the fall
+  rig.root.position.copy(P[J.pelvis]); rig.root.position.y -= 0.9;
+}
+function endRagdoll() {
+  if (!RAG.active) return;
+  RAG.active = false; RAG.done = false; RAG.vis.grp.visible = false; rig.root.visible = true;
+  $('prompt').style.display = 'none';
+}
+function getUp() { // R: stand up where you fell, skis clicked back in
+  if (S.mode !== 'crash' || !RAG.active || RAG.t < 0.8) return;
+  const pel = RAG.P[J.pelvis], head = RAG.P[J.head];
+  endRagdoll();
+  // stand up across the slope (skis horizontal so you don't slide off), on the side your head ended up
+  const fall = downhillYaw(pel.x, pel.z), sideSign = Math.sign((head.x - pel.x) * Math.cos(fall) - (head.z - pel.z) * Math.sin(fall)) || 1;
+  const yaw = fall + Math.PI / 2 * sideSign;
+  S.p.set(pel.x, hAt(pel.x, pel.z), pel.z); S.prev.copy(S.p); S.v.set(0, 0, 0); S.yaw = yaw;
+  S.mode = 'ski'; S.onFoot = false; S.grounded = true; S.steer = 0; S.yawRate = 0; S.edge = 0; S.latAcc = 0; S.hockey = false; S.walkSpeed = 0;
+  trackBreak();
+  for (const k in poseVel) poseVel[k] = Array.isArray(poseVel[k]) ? [0, 0] : 0;
+  Object.assign(pose, { kL: 1.3, kR: 1.3, pitch: 0.8, tumbleX: 0, tumbleZ: 0 });
+  flash('Back on your feet', 1.2);
+}
+function puff(x, y, z, n) { // snow cloud where the body hits the snow
+  for (let i = 0; i < n; i++) {
+    const k = spHead = (spHead + 1) % SPN, b = k * 3;
+    spPos[b] = x + (Math.random() - 0.5) * 0.6; spPos[b + 1] = y + Math.random() * 0.2; spPos[b + 2] = z + (Math.random() - 0.5) * 0.6;
+    spVel[b] = (Math.random() - 0.5) * 4; spVel[b + 1] = 1 + Math.random() * 3; spVel[b + 2] = (Math.random() - 0.5) * 4;
+    spLife[k] = 0.5 + Math.random() * 0.8;
+  }
+}
+
 // ================= animation =================
 // Poses are driven by the physics (sideways acceleration -> inclination, load -> knee flex, vertical
 // acceleration -> absorption) and every joint follows its target through a critically damped spring.
@@ -1981,6 +2164,7 @@ let animT = 0, prevVy = 0, absorb = 0, absorbV = 0, lastLatSign = 0;
 function animate(dt) {
   animT += dt;
   const spd = S.v.length(), P = {};
+  if (S.mode === 'crash' && RAG.active) { ragRender(); updatePlayerCarrier(); return; }
   S.plant = S.plant.map(v => Math.max(0, v - dt));
   S.land = Math.max(0, S.land - dt * 2.2);
   S.airT = S.grounded ? 0 : S.airT + dt;
@@ -2505,8 +2689,11 @@ function updateHud(dt) {
   else if (S.onFoot) $('piste').innerHTML = `<b>On foot</b> · skis on your shoulder <span style="opacity:.6">(K)</span>`;
   else { const p = pisteNear(S.p.x, S.p.z); $('piste').innerHTML = p ? `<span class="pill" style="background:${diffOf(p.d).col}">${p.r ? p.r : diffOf(p.d).name}</span> ${(p.n || diffOf(p.d).name + ' piste').replace(/</g, '')}` : 'Off piste'; }
   nearLift = S.mode === 'ski' ? findNearLift() : null;
-  $('prompt').style.display = nearLift ? 'block' : 'none';
-  if (nearLift) $('prompt').innerHTML = `Press <b>E</b> to ride <b>${nearLift.name}</b> → ${Math.round(nearLift.top.y)} m`;
+  if (S.mode === 'crash') { $('piste').innerHTML = '<b>Crashed</b> · skis off'; if (RAG.done) showPromptR(); else $('prompt').style.display = 'none'; }
+  else {
+    $('prompt').style.display = nearLift ? 'block' : 'none';
+    if (nearLift) $('prompt').innerHTML = `Press <b>E</b> to ride <b>${nearLift.name}</b> → ${Math.round(nearLift.top.y)} m`;
+  }
   drawMini();
 }
 const peaks = OSM.peaks.map(p => { const [x, z] = ll2w(p.g[0], p.g[1]); return { name: p.n, ele: p.ele || 0, x, z, y: 0 }; }).filter(p => inMap(p.x, p.z));

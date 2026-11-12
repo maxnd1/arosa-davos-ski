@@ -23,11 +23,13 @@ Then open <http://127.0.0.1:8642> in Chrome or Edge (first load takes ~20 s). Op
 | Esc | menu: choose your start, settings, controls |
 | A / D | roll onto the edges and turn (hold longer for a tighter carve) |
 | W | tuck, or skate when slow |
-| S | snowplough, or hockey stop at speed |
+| S | pizza (snowplough): gentle braking at any speed |
+| Q | hockey stop (hold A or D with it to choose the side) |
 | Space | jump |
 | E | ride the lift you are standing at |
 | F | fast-forward the lift |
 | K | take skis off / put them on (walk with W, jog with Shift) |
+| R | after a fall: get back up with your skis on |
 | T | teleport to a lift top or restaurant |
 | M | map: scroll or + / − to zoom, drag to pan, click to drop in |
 | C | camera mode |
