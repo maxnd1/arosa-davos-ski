@@ -20,7 +20,8 @@ Then open <http://127.0.0.1:8642> in Chrome or Edge (first load takes ~20 s). Op
 
 | Key | Action |
 |---|---|
-| A / D | steer |
+| Esc | menu: choose your start, settings, controls |
+| A / D | roll onto the edges and turn (hold longer for a tighter carve) |
 | W | tuck, or skate when slow |
 | S | snowplough, or hockey stop at speed |
 | Space | jump |
@@ -28,7 +29,7 @@ Then open <http://127.0.0.1:8642> in Chrome or Edge (first load takes ~20 s). Op
 | F | fast-forward the lift |
 | K | take skis off / put them on (walk with W, jog with Shift) |
 | T | teleport to a lift top or restaurant |
-| M | map (click to drop in) |
+| M | map: scroll or + / − to zoom, drag to pan, click to drop in |
 | C | camera mode |
 | Page Up / Page Down, mouse wheel | zoom |
 | Mouse drag | orbit the camera |
