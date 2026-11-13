@@ -119,6 +119,8 @@
       <tr><td><b>Space</b></td><td>Jump · on a rail or box: pop off</td></tr>
       <tr><td>In the air</td><td><b>A</b>/<b>D</b> spin · <b>W</b>/<b>S</b> front/back flip (press after take-off) · <b>Shift</b> grab · land a box or rail to slide it</td></tr>
       <tr><td><b>E</b> / <b>F</b></td><td>Ride the lift at a valley station · fast-forward the ride</td></tr>
+      <tr><td><b>G</b></td><td>Touring skis: skins on / off — walk uphill with W (Shift faster)</td></tr>
+      <tr><td><b>B</b> / <b>P</b></td><td>Avalanche transceiver drill: find the buried beacon, then probe and dig (P)</td></tr>
       <tr><td><b>K</b></td><td>Take your skis off and walk (W, Shift to jog) · put them back on</td></tr>
       <tr><td><b>R</b></td><td>After a fall: get back up with your skis on</td></tr>
       <tr><td><b>T</b> / <b>M</b></td><td>Teleport list · zoomable map (scroll, drag, click to drop in)</td></tr>
@@ -744,7 +746,7 @@ function flagTexture() {
 // ================= terrain =================
 let pisteTex, pisteMaskTex;
 function snowMaterial(extra = {}) {
-  const m = new THREE.MeshLambertMaterial({ vertexColors: true, map: pisteTex, ...extra });
+  const m = new THREE.MeshStandardMaterial({ vertexColors: true, map: pisteTex, roughness: 0.9, metalness: 0, ...extra });
   m.onBeforeCompile = sh => {
     sh.uniforms.uPiste = { value: pisteMaskTex };
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWP; varying vec3 vWN;')
@@ -754,6 +756,20 @@ uniform sampler2D uPiste; varying vec3 vWP; varying vec3 vWN;
 float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float vn2(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.-2.*f); return mix(mix(h21(i), h21(i+vec2(1,0)), f.x), mix(h21(i+vec2(0,1)), h21(i+vec2(1,1)), f.x), f.y); }
 float snowRel(vec2 q){ return vn2(q * 0.22) * 0.5 + vn2(q * 0.6) * 0.15 + vn2(vec2(dot(q, vec2(0.8, 0.6)) * 0.9, dot(q, vec2(-0.6, 0.8)) * 0.3)) * 0.05; }`)
+      .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+  roughnessFactor = mix(0.95, 0.55, smoothstep(0.45, 0.8, texture2D(uPiste, vMapUv).r));      // fresh powder is matt, groomed / icy snow has a sheen`)
+      .replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
+  reflectedLight.indirectDiffuse *= vec3(0.85, 0.94, 1.13);                                       // light scattered inside the snow comes out blue
+  #if NUM_DIR_LIGHTS > 0
+  {
+    vec2 gq = floor(mod(vWP.xz, 2048.0) * 9.0); float gd = length(vWP - cameraPosition);
+    if (h21(gq) > 0.975 && gd < 45.0) {                                                             // ice crystals glinting in the sun
+      vec3 rn = normalize(geometryNormal + (vec3(h21(gq + 3.1), h21(gq + 7.7), h21(gq + 1.3)) - 0.5) * 0.9);
+      float gl = pow(max(dot(rn, normalize(directionalLights[0].direction + geometryViewDir)), 0.0), 700.0) * (1.0 - smoothstep(12.0, 45.0, gd));
+      reflectedLight.directSpecular += directionalLights[0].color * gl * 4.0;
+    }
+  }
+  #endif`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 {
   float offp = 1.0 - smoothstep(0.45, 0.8, texture2D(uPiste, vMapUv).r);
@@ -789,8 +805,6 @@ float snowRel(vec2 q){ return vn2(q * 0.22) * 0.5 + vn2(q * 0.6) * 0.15 + vn2(ve
   diffuseColor.rgb *= 1.0 - groom * smoothstep(0.86, 1.0, lane) * 0.07 * (1.0 - smoothstep(80.0, 900.0, dist));
   float berm = smoothstep(0.2, 0.42, pm) * (1.0 - smoothstep(0.42, 0.62, pm));                  // pushed-up snow berm at the piste edge
   diffuseColor.rgb *= 1.0 - berm * 0.2;
-  float sp = h21(floor(lp * 11.0) + floor(cameraPosition.xz * 0.6));                         // glitter
-  diffuseColor.rgb += step(0.9965, sp) * (1.0 - smoothstep(4.0, 32.0, dist)) * 0.9 * step(0.75, N.y);
 }`);
   };
   return m;
@@ -1993,7 +2007,7 @@ function makeRig() {
   const neck = new THREE.Group(); neck.position.y = 0.6; spine.add(neck);
   mesh(new THREE.CylinderGeometry(0.062, 0.068, 0.085, 14), mats.strap, neck, 0, 0.03, 0);
   mesh(new THREE.SphereGeometry(0.1, 18, 14), mats.skin, neck, 0, 0.125, 0.015).scale.set(0.95, 1.08, 1);
-  mesh(new THREE.SphereGeometry(0.127, 22, 14, 0, Math.PI * 2, 0, 1.95), mats.helmet, neck, 0, 0.14, -0.005).scale.set(1, 1, 1.12);
+  const helmetMesh = mesh(new THREE.SphereGeometry(0.127, 22, 14, 0, Math.PI * 2, 0, 1.95), mats.helmet, neck, 0, 0.14, -0.005); helmetMesh.scale.set(1, 1, 1.12);
   mesh(new THREE.CylinderGeometry(0.133, 0.133, 0.068, 26, 1, true, -1.05, 2.1), mats.goggle, neck, 0, 0.128, 0.006).scale.set(1, 1, 1.12);
   mesh(new THREE.CylinderGeometry(0.134, 0.134, 0.034, 26, 1, true, 1.05, 4.18), mats.strap, neck, 0, 0.128, 0.006).scale.set(1, 1, 1.12);
   const arms = [1, -1].map(s => {
@@ -2013,7 +2027,7 @@ function makeRig() {
     mesh(new THREE.ConeGeometry(0.008, 0.05, 6).rotateX(Math.PI).translate(0, -1.17, 0), mats.buckle, pole);
     return { shoulder, elbow, hand, pole };
   });
-  return { root, yawG, roll, tumble, body, pelvis, legs, spine, neck, arms };
+  return { root, yawG, roll, tumble, body, pelvis, legs, spine, neck, arms, mats, helmetMesh };
 }
 const rig = makeRig(); scene.add(rig.root);
 // skis (and poles) carried over the right shoulder when walking
@@ -2085,6 +2099,9 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyM') openMap();
   if (e.code === 'KeyC') camMode = (camMode + 1) % 3;
   if (e.code === 'KeyK') toggleSkis();
+  if (e.code === 'KeyG') toggleSkins();
+  if (e.code === 'KeyB') lvsStart();
+  if (e.code === 'KeyP') lvsProbe();
   if (e.code === 'KeyR') getUp();
   if (e.code === 'KeyE') tryLift();
   if (e.code === 'Space') { e.preventDefault(); jump(); }
@@ -2108,12 +2125,13 @@ function teleportTop(l) {
   }
   placeAt(x, z); flash(l.name + ' · ' + Math.round(hAt(x, z)) + ' m', 2.5);
 }
-function jump() { if (S.mode === 'ski' && S.grounded && !S.onFoot) { const n = normalAt(S.p.x, S.p.z); S.v.addScaledVector(n, 4.2); S.v.y += 1; S.grounded = false; S.p.y += 0.1; S.land = -0.6; } }
+function jump() { if (S.mode === 'ski' && S.grounded && !S.onFoot && !S.skins) { const n = normalAt(S.p.x, S.p.z); S.v.addScaledVector(n, 4.2); S.v.y += 1; S.grounded = false; S.p.y += 0.1; S.land = -0.6; } }
 let nearLift = null;
 function tryLift() {
   if (S.mode === 'lift' || S.mode === 'board') return;
   if (!nearLift) { flash('No lift station nearby', 1.2); return; }
   if (S.onFoot) { flash('Put your skis on first (K)', 1.4); return; }
+  if (S.skins) { flash('Take the skins off first (G)', 1.4); return; }
   const l = nearLift;
   if (!liftOpen(l)) { const sh = l.spec.carrier === 'cablecar' || l.spec.carrier === 'funicular'; flash(`${l.name} is closed — runs ${sh ? '08:15–16:45' : '08:30–16:30'} (now ${fmtH(ENV.hour)})`, 2.5); return; }
   S.mode = 'board'; S.lift = l; S.v.set(0, 0, 0); trackBreak();
@@ -2211,19 +2229,20 @@ function step(dt) {
   if (!inMap(S.p.x, S.p.z)) { S.p.x = clamp(S.p.x, -WW / 2 + 60, WW / 2 - 60); S.p.z = clamp(S.p.z, -HH / 2 + 60, HH / 2 - 60); S.v.set(0, 0, 0); }
   S.prev.copy(S.p);
   if (S.onFoot) { walkStep(dt, steerIn, tuck, brake); collide(); return; }
+  if (S.skins) { skinStep(dt, steerIn, tuck, brake); collide(); return; }
   if (parkGrind(dt)) { collide(); return; }
   const spd = S.v.length();
   S.tuck += ((tuck && spd > 9 ? 1 : 0) - S.tuck) * Math.min(1, dt * 5);
   const groomed = sstep(0.35, 0.75, pmAt(S.p.x, S.p.z)), groomK = (0.55 + 0.45 * groomed) * ENV.condGrip; // edge hold: corduroy vs powder, icy mornings
   // edges are rolled on progressively (~0.5 s to full edge) — turns have to be built, they don't snap
-  S.edge += clamp(steerIn - S.edge, -dt * 2.2, dt * 2.2);
+  S.edge += clamp(steerIn - S.edge, -dt * 2.2 * EQ().roll, dt * 2.2 * EQ().roll);
   if (steerIn) S.lastSteerSign = steerIn;
   const hockey = S.grounded && stopKey && spd > 2.5;       // Q: hockey stop · S: pizza (snowplough)
   let wantYawRate;
   if (!S.grounded) wantYawRate = S.steer * (PARK.near || S.airT > 0.5 ? 4.6 : 2.2);                     // spin in the air
   else {
     const pivot = S.edge * 1.2;                                      // slow speed: skidded pivot turns
-    const radius = 12 / Math.max(0.08, Math.abs(S.edge));            // carving: ~12 m radius at full edge, wide arcs with a little edge
+    const radius = EQ().radius / Math.max(0.08, Math.abs(S.edge));            // carving: ~12 m radius at full edge, wide arcs with a little edge
     const carve = Math.sign(S.edge) * spd / radius;
     const aMax = G * (0.55 + 0.95 * groomK);                         // what the edges can hold (~1.5 g groomed, ~1.1 g powder)
     const lim = aMax / Math.max(spd, 0.5);
@@ -2232,6 +2251,7 @@ function step(dt) {
     wantYawRate = (pivot * (1 - t) + w * t) * (brake ? 0.55 : 1);  // in a wedge you steer by weighting one ski: slower turns
   }
   S.yawRate += (wantYawRate - S.yawRate) * Math.min(1, dt * 5);
+  { const st = EQ().stable / 3.6; if (S.grounded && spd > st) S.yawRate += (Math.random() - 0.5) * 0.04 * (spd - st); } // short / soft skis get nervous at high speed
   if (!hockey) S.yaw += S.yawRate * dt;
   S.latAcc = S.grounded && !hockey ? S.yawRate * spd : 0;
   if (S.grounded && spd > 3) {
@@ -2261,7 +2281,7 @@ function step(dt) {
       if (Math.abs(gf) < 0.1 * G * n.y && Math.abs(gl) < 0.95 * G * n.y) { S.v.set(0, 0, 0); S.p.y = hAt(S.p.x, S.p.z); S.skid = 0; collide(); return; }
     }
     let vf = S.v.dot(tmpF), vl = S.v.dot(tmpL);
-    const grip = hockey ? 2.2 : brake ? 6 : (5 + 9 * Math.abs(S.edge)) * groomK; // more edge = more hold
+    const grip = hockey ? 2.2 : brake ? 6 : (5 + 9 * Math.abs(S.edge)) * groomK * EQ().grip; // more edge = more hold
     const vl0 = vl; vl *= Math.exp(-grip * dt);
     const eff = hockey ? 0.04 : brake ? 0.1 : 0.85;                  // carving keeps speed, skidding scrubs it
     vf = Math.sign(vf || 1) * Math.sqrt(vf * vf + eff * (vl0 * vl0 - vl * vl));
@@ -2270,7 +2290,7 @@ function step(dt) {
     const s = S.v.length();
     if (tuck && s < 9) S.v.addScaledVector(tmpF, 2.4 * dt);
     const across = s > 0.1 ? Math.abs(vl) / s : 0;
-    const mu = hockey ? 0.06 + 0.58 * across : brake ? 0.06 + 0.26 * clamp(1.2 - s / 25, 0.35, 1) : 0.06 + (1 - groomed) * (0.04 + Math.min(0.1, ENV.fresh * 0.004)) + ENV.condFric * (1 - (S.p.y > 1900 && ENV.condFric > 0.02 ? 0.7 : 0)), k = 0.0042 - S.tuck * 0.0018;
+    const mu = hockey ? 0.06 + 0.58 * across : brake ? 0.06 + 0.26 * clamp(1.2 - s / 25, 0.35, 1) : 0.06 + (1 - groomed) * (0.04 + Math.min(0.1, ENV.fresh * 0.004)) * EQ().powder + ENV.condFric * (1 - (S.p.y > 1900 && ENV.condFric > 0.02 ? 0.7 : 0)), k = 0.0042 - S.tuck * 0.0018;
     const decel = mu * G * n.y + k * s * s;
     if (s > 1e-4) S.v.multiplyScalar(Math.max(0, 1 - decel * dt / s));
     S.skid = Math.abs(vl0) * 0.9 + (hockey ? s * 0.9 : brake ? s * 0.18 : 0);
@@ -2347,7 +2367,7 @@ function walkStep(dt, turn, fwd, back) {
 function toggleSkis() {
   if (S.mode !== 'ski' || !S.grounded) { flash('You can only do that standing on the snow', 1.4); return; }
   if (!S.onFoot && S.v.length() > 1.5) { flash('Stop first to take off your skis', 1.4); return; }
-  S.onFoot = !S.onFoot; S.v.set(0, 0, 0); S.walkSpeed = 0; S.yawRate = 0; S.land = 0.5; trackBreak();
+  S.onFoot = !S.onFoot; S.skins = false; S.v.set(0, 0, 0); S.walkSpeed = 0; S.yawRate = 0; S.land = 0.5; trackBreak();
   flash(S.onFoot ? 'Skis off — W to walk, Shift to jog, K to put them back on' : 'Skis on', 1.8);
 }
 
@@ -2415,13 +2435,13 @@ function startRagdoll(impactVel) {
   RAG.kneeSide = [kl, kr];
   // skis and poles come off and fly / slide on their own
   RAG.loose = [];
-  rig.legs.forEach((l, i) => {
+  if (!EQ().board) rig.legs.forEach((l, i) => {
     const tip = wp(l.skiG, 0, 0.02, 0.86), tail = wp(l.skiG, 0, 0.02, -0.8);
     const lv = v.clone().multiplyScalar(0.75 + Math.random() * 0.2).addScaledVector(side, (i ? -1 : 1) * (0.8 + Math.random() * 1.6)); lv.y += 1 + Math.random() * 2;
     const spin = (Math.random() - 0.5) * 10;
     RAG.loose.push({ kind: 'ski', i, a: tip, b: tail, pa: tip.clone().addScaledVector(lv, -h).addScaledVector(side, spin * h * 0.4), pb: tail.clone().addScaledVector(lv, -h).addScaledVector(side, -spin * h * 0.4), len: 1.66, r: 0.03, mu: 1.0, roll: 0, rollV: (Math.random() - 0.5) * 14 });
   });
-  rig.arms.forEach((a, i) => {
+  if (!EQ().board) rig.arms.forEach((a, i) => {
     const grip = wp(a.pole), tip = wp(a.pole, 0, -1.15, 0);
     const lv = v.clone().multiplyScalar(0.6 + Math.random() * 0.3).addScaledVector(side, (i ? -1 : 1) * Math.random() * 2); lv.y += 1.5 * Math.random();
     RAG.loose.push({ kind: 'pole', i, a: grip, b: tip, pa: grip.clone().addScaledVector(lv, -h), pb: tip.clone().addScaledVector(lv, -h).addScaledVector(vdir, 0.02), len: 1.15, r: 0.02, mu: 0.6 });
@@ -3284,6 +3304,161 @@ function trickLand() { // on touchdown: score the trick, or return why you crash
 }
 const _flipQ = new THREE.Quaternion(), _xAxis = new THREE.Vector3(1, 0, 0), rigBaseQ = new THREE.Quaternion(), _pivot = new THREE.Vector3(), _pivot2 = new THREE.Vector3();
 
+// ================= equipment, outfit, ski touring, avalanche transceiver =================
+// Each set of skis (or the board) changes how the physics behaves: sidecut radius, edge hold, how fast you can roll
+// onto the edges, how much it sinks in powder, and how nervous it gets at high speed.
+const EQUIP = {
+  allmtn: { name: 'All-mountain skis', radius: 13, grip: 1, roll: 1, powder: 1, stable: 110, len: 1.66, width: 1, tint: '#ffffff' },
+  slalom: { name: 'Slalom race skis', radius: 10, grip: 1.25, roll: 1.4, powder: 1.5, stable: 75, len: 1.62, width: 0.9, tint: '#ff5a4a' },
+  powder: { name: 'Powder skis', radius: 19, grip: 0.85, roll: 0.8, powder: 0.3, stable: 95, len: 1.84, width: 1.6, tint: '#5aa8ff' },
+  touring: { name: 'Touring skis (skins: G)', radius: 16, grip: 0.9, roll: 0.95, powder: 0.6, stable: 80, len: 1.72, width: 1.25, tint: '#b9f06a' },
+  board: { name: 'Snowboard', radius: 8.5, grip: 0.95, roll: 0.85, powder: 0.45, stable: 95, len: 1.56, width: 0, board: true },
+};
+const EQ = () => EQUIP[settings.equip] || EQUIP.allmtn;
+for (const e of Object.values(EQUIP)) e.board = !!e.board;
+const LENS = { orange: '#ff7a1a', blue: '#2a6fd6', silver: '#c9d2da', gold: '#e0a800', green: '#2fb36d' };
+let boardMesh = null, beanie = null, flapU = { t: { value: 0 }, amp: { value: 0 } };
+function addFlap(m) { // jacket and trousers flutter in the wind at speed
+  m.onBeforeCompile = sh => {
+    sh.uniforms.uFT = flapU.t; sh.uniforms.uFA = flapU.amp;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uFT; uniform float uFA;')
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+  float fw = sin(uFT * 31.0 + position.y * 45.0 + position.x * 23.0) * 0.6 + sin(uFT * 53.0 + position.z * 37.0 - position.y * 19.0) * 0.4;
+  transformed += objectNormal * fw * uFA * 0.007;`);
+  };
+  m.needsUpdate = true;
+}
+function buildGearVisuals() {
+  const M = rig.mats;
+  addFlap(M.jacket); addFlap(M.jacket2); addFlap(M.pants);
+  // snowboard: one deck under both feet, along the direction of travel
+  const shape = new THREE.Shape(), L = 0.78, Wd = 0.13;
+  shape.moveTo(-Wd, -L + 0.12); shape.quadraticCurveTo(-Wd, -L, 0, -L); shape.quadraticCurveTo(Wd, -L, Wd, -L + 0.12);
+  shape.quadraticCurveTo(Wd - 0.015, 0, Wd, L - 0.12); shape.quadraticCurveTo(Wd, L, 0, L); shape.quadraticCurveTo(-Wd, L, -Wd, L - 0.12); shape.quadraticCurveTo(-Wd + 0.015, 0, -Wd, -L + 0.12);
+  const bg = new THREE.ExtrudeGeometry(shape, { depth: 0.014, bevelEnabled: false, curveSegments: 8 }); bg.rotateX(Math.PI / 2); bg.translate(0, 0.014, 0);
+  const bp = bg.attributes.position; for (let i = 0; i < bp.count; i++) { const z = bp.getZ(i); if (Math.abs(z) > 0.6) bp.setY(i, bp.getY(i) + (Math.abs(z) - 0.6) ** 2 * 1.6); } bg.computeVertexNormals();
+  const cv = document.createElement('canvas'); cv.width = 64; cv.height = 256; const c = cv.getContext('2d');
+  const gr = c.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#16181c'); gr.addColorStop(0.5, '#2a6fd6'); gr.addColorStop(1, '#16181c'); c.fillStyle = gr; c.fillRect(0, 0, 64, 256);
+  c.fillStyle = '#f2c230'; c.fillRect(0, 118, 64, 20); const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  boardMesh = new THREE.Group();
+  const deck = new THREE.Mesh(bg, [new THREE.MeshStandardMaterial({ map: tex, roughness: 0.35 }), new THREE.MeshStandardMaterial({ color: '#141618', roughness: 0.4, metalness: 0.5 })]);
+  deck.castShadow = true; boardMesh.add(deck);
+  for (const z of [-0.24, 0.24]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.05, 0.13), new THREE.MeshStandardMaterial({ color: '#202327', roughness: 0.5 })); b.position.set(0, 0.04, z); b.castShadow = true; boardMesh.add(b); }
+  boardMesh.visible = false; rig.root.add(boardMesh);
+  // knitted beanie with a bobble, worn instead of the helmet
+  beanie = new THREE.Group();
+  const knit = new THREE.MeshStandardMaterial({ color: '#c8102e', roughness: 0.95 }); M.beanie = knit;
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.112, 18, 12, 0, Math.PI * 2, 0, 1.7), knit); cap.position.set(0, 0.15, 0.005); cap.scale.set(1, 1.05, 1.08);
+  const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.113, 0.115, 0.05, 18, 1, true), knit); cuff.position.set(0, 0.165, 0.005); cuff.scale.set(1, 1, 1.08);
+  const bob = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), new THREE.MeshStandardMaterial({ color: '#f4f4f4', roughness: 1 })); bob.position.set(0, 0.27, 0); bob.name = 'bobble';
+  for (const m of [cap, cuff, bob]) { m.castShadow = true; beanie.add(m); }
+  beanie.visible = false; rig.neck.add(beanie);
+  applyGear();
+}
+function applyGear() {
+  if (!rig.mats || !boardMesh) return;
+  const M = rig.mats, e = EQ();
+  M.jacket.color.set(settings.jacket); M.jacket2.color.set(settings.jacket2); M.pants.color.set(settings.pants); M.helmet.color.set(settings.helmet);
+  M.goggle.color.set(LENS[settings.lens] || LENS.orange); if (M.beanie) M.beanie.color.set(settings.jacket);
+  const helmet = settings.head !== 'beanie'; rig.helmetMesh.visible = helmet; beanie.visible = !helmet;
+  M.skiTop.color.set(e.tint || '#ffffff');
+  rig.legs.forEach(l => l.ski.scale.set(e.width || 1, 1, (e.len || 1.66) / 1.66));
+  if (!e.board && S.skins === undefined) S.skins = false;
+  if (!(settings.equip === 'touring')) S.skins = false;
+}
+// ---------- ski touring: skins on, walk uphill on your skis ----------
+function toggleSkins() {
+  if (S.mode !== 'ski' || S.onFoot) { flash('Put your skis on first (K)', 1.4); return; }
+  if (settings.equip !== 'touring') { flash('Skins need touring skis — choose them under Settings → Gear', 2.2); return; }
+  if (!S.grounded || S.v.length() > 2) { flash('Stop first to put the skins on', 1.4); return; }
+  S.skins = !S.skins; S.walkSpeed = 0; S.v.set(0, 0, 0); trackBreak();
+  flash(S.skins ? 'Skins on — W to walk uphill (Shift: faster), G to take them off for the descent' : 'Skins off — ready to ski down', 2.4);
+}
+function skinStep(dt, turn, fwd, back) { // gliding steps uphill; steep pitches are slow, too steep is impossible
+  S.yawRate += (turn * 1.6 - S.yawRate) * Math.min(1, dt * 8); S.yaw += S.yawRate * dt;
+  const dir = tmpF.set(Math.sin(S.yaw), 0, Math.cos(S.yaw));
+  const grade = (hAt(S.p.x + dir.x * 1.5, S.p.z + dir.z * 1.5) - hAt(S.p.x, S.p.z)) / 1.5;
+  let target = fwd ? (keys.ShiftLeft || keys.ShiftRight ? 1.6 : 1.1) : back ? -0.5 : 0;
+  if (target > 0) target *= grade > 0 ? clamp(1 - grade * 1.15, 0, 1) : Math.min(2.2, 1 - grade * 2.5);
+  if (fwd && grade > 0.82 && S.grounded) { if (!S.steepT || S.steepT < 0) { flash('Too steep to climb straight up — traverse (A/D) and zigzag', 1.8); S.steepT = 4; } }
+  S.steepT = (S.steepT || 0) - dt;
+  S.walkSpeed += (target - S.walkSpeed) * Math.min(1, dt * 4);
+  S.v.set(dir.x * S.walkSpeed, 0, dir.z * S.walkSpeed);
+  S.p.x += S.v.x * dt; S.p.z += S.v.z * dt; S.p.y = hAt(S.p.x, S.p.z);
+  S.grounded = true; S.skid = 0; S.tuck = 0; S.edge = 0;
+  if (Math.abs(S.walkSpeed) > 0.1) S.walkPh += dt * (2.2 + Math.abs(S.walkSpeed) * 1.6);
+}
+// ---------- avalanche transceiver (LVS) search drill ----------
+const LVS = { on: false, x: 0, z: 0, depth: 1.2, t: 0, beepT: 0, probes: [], phase: '', digT: 0, hole: null, el: null, best: 0 };
+function lvsStart() {
+  if (LVS.on) { lvsStop('Search cancelled'); return; }
+  if (S.mode !== 'ski') return;
+  // bury a transceiver 40–90 m away, somewhere reachable around you
+  for (let k = 0; k < 30; k++) {
+    const a = Math.random() * Math.PI * 2, d = 40 + Math.random() * 50, x = S.p.x + Math.sin(a) * d, z = S.p.z + Math.cos(a) * d;
+    if (!inMap(x, z) || hitObstacle(x, z, hAt(x, z) + 0.5)) continue;
+    Object.assign(LVS, { on: true, x, z, depth: 0.8 + Math.random() * 1.0, t: 0, beepT: 0, phase: 'signal', digT: 0 });
+    break;
+  }
+  if (!LVS.on) return;
+  LVS.probes.forEach(p => scene.remove(p)); LVS.probes = []; if (LVS.hole) { scene.remove(LVS.hole); LVS.hole = null; }
+  if (!LVS.el) { LVS.el = document.createElement('div'); LVS.el.id = 'lvs'; Object.assign(LVS.el.style, { position: 'fixed', right: '18px', bottom: '90px', width: '190px', padding: '12px 14px', borderRadius: '14px', background: 'rgba(12,16,22,.82)', color: '#fff', font: '600 13px system-ui', textAlign: 'center', zIndex: 20, display: 'none' }); document.body.appendChild(LVS.el); }
+  LVS.el.style.display = 'block';
+  flash('Avalanche drill: a transceiver is buried nearby — switch to SEARCH and find it! (B cancels)', 3.5);
+}
+function lvsStop(msg) { LVS.on = false; if (LVS.el) LVS.el.style.display = 'none'; if (msg) flash(msg, 2); }
+function lvsProbe() { // P: probe (or keep digging once you hit)
+  if (!LVS.on) return;
+  const d = Math.hypot(LVS.x - S.p.x, LVS.z - S.p.z);
+  if (LVS.phase === 'dig') return;
+  const fx = S.p.x + Math.sin(S.yaw) * 0.6, fz = S.p.z + Math.cos(S.yaw) * 0.6, y = hAt(fx, fz);
+  const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 2.4, 6), new THREE.MeshStandardMaterial({ color: '#d8dde2', metalness: 0.6, roughness: 0.4 }));
+  rod.position.set(fx, y + 0.4, fz); rod.castShadow = true; scene.add(rod); LVS.probes.push(rod);
+  const hit = Math.hypot(LVS.x - fx, LVS.z - fz);
+  if (hit < 0.6) { LVS.phase = 'dig'; LVS.digT = 0; flash(`Probe strike at ${LVS.depth.toFixed(1)} m! Leave the probe in and dig — hold P`, 3); }
+  else flash(d > 3 ? 'Too far away to probe — get closer first' : 'Nothing — probe again 25 cm further (spiral outwards)', 1.6);
+}
+function lvsBeep(dist) {
+  if (!audio) return; const { ctx, master } = audio, t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = 'square'; o.frequency.value = 2275; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.05 * clamp(1.4 - dist / 60, 0.3, 1), t + 0.005); g.gain.linearRampToValueAtTime(0, t + 0.07);
+  o.connect(g).connect(master); o.start(t); o.stop(t + 0.08);
+}
+function updateLVS(dt) {
+  if (!LVS.on) return;
+  LVS.t += dt;
+  const dx = LVS.x - S.p.x, dz = LVS.z - S.p.z, d = Math.hypot(dx, dz), d3 = Math.hypot(d, LVS.depth);
+  // real 3-antenna beacons: signal from ~50 m, distance along the flux line, direction arrow, beeps faster as you close in
+  LVS.beepT -= dt; if (LVS.beepT <= 0 && LVS.phase !== 'found') { LVS.beepT = d3 > 50 ? 1.0 : clamp(d3 / 40, 0.12, 1.0); if (d3 <= 60) lvsBeep(d3); }
+  let html;
+  if (LVS.phase === 'dig') {
+    if (keys.KeyP) { LVS.digT += dt; if (LVS.digT > 2 + LVS.depth * 3) lvsFound(); }
+    html = `<div style="font-size:11px;opacity:.7">PROBE STRIKE ${LVS.depth.toFixed(1)} m</div><div style="font-size:22px;margin:4px 0">Digging…</div><div style="height:6px;background:#333;border-radius:3px"><div style="height:6px;width:${Math.min(100, LVS.digT / (2 + LVS.depth * 3) * 100)}%;background:#ffb300;border-radius:3px"></div></div><div style="font-size:11px;opacity:.7;margin-top:6px">hold P</div>`;
+  } else if (d3 > 50) html = `<div style="font-size:11px;opacity:.7">SEARCH · ${Math.floor(LVS.t)} s</div><div style="font-size:20px;margin:6px 0">— — —</div><div style="font-size:11px;opacity:.75">No signal yet: sweep the area in 40 m strips</div>`;
+  else {
+    const want = Math.atan2(dx, dz), cy = camYawNow(), rel = Math.atan2(Math.sin(want - cy), Math.cos(want - cy));
+    const arrow = Math.abs(rel) < 0.35 ? '⬆' : Math.abs(rel) > 2.6 ? '⬇' : rel > 0 ? '⬅' : '➡';
+    const fine = d3 < 3;
+    html = `<div style="font-size:11px;opacity:.7">SEARCH · ${Math.floor(LVS.t)} s</div><div style="font-size:30px;line-height:1.1">${fine ? '✚' : arrow}</div><div style="font-size:24px">${d3.toFixed(1)} m</div><div style="font-size:11px;opacity:.75">${fine ? 'Fine search: go low and slow, then probe (P)' : 'Follow the arrow'}</div>`;
+  }
+  LVS.el.innerHTML = html;
+}
+function lvsFound() {
+  LVS.phase = 'found';
+  const y = hAt(LVS.x, LVS.z);
+  LVS.hole = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 0.7, 0.6, 18), new THREE.MeshStandardMaterial({ color: '#9fb4c8', roughness: 0.9 }));
+  LVS.hole.position.set(LVS.x, y + 0.02, LVS.z); scene.add(LVS.hole);
+  const s = Math.round(LVS.t); const best = !STATS.lvsBest || s < STATS.lvsBest; if (best) STATS.lvsBest = s;
+  lvsStop(); flash(`Found in ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}${best ? ' — your best!' : ''} · in a real burial the first 15 minutes decide everything`, 4);
+}
+function camYawNow() { const d = new THREE.Vector3(); camera.getWorldDirection(d); return Math.atan2(d.x, d.z); }
+function updateGearFrame(dt) {
+  flapU.t.value += dt;
+  const sp = S.mode === 'ski' && !S.onFoot && !S.skins ? S.v.length() : S.mode === 'lift' ? 2 : 0;
+  flapU.amp.value += (clamp((sp - 6) / 22, 0, 1) - flapU.amp.value) * Math.min(1, dt * 3);
+  if (beanie && beanie.visible) { const b = beanie.getObjectByName('bobble'); b.position.x = Math.sin(flapU.t.value * 9) * 0.01 * flapU.amp.value; b.position.z = -0.02 * flapU.amp.value; }
+  updateLVS(dt);
+}
+
 // ================= animation =================
 // Poses are driven by the physics (sideways acceleration -> inclination, load -> knee flex, vertical
 // acceleration -> absorption) and every joint follows its target through a critically damped spring.
@@ -3309,6 +3484,10 @@ function animate(dt) {
       back: 0, pitch: 0.08 + amp * 0.06, lift: 0.03 * amp * Math.abs(Math.cos(ph)), swing: [sw, -sw], roll: Math.sin(ph) * 0.03 * amp,
       armF: [0.1 - sw * 0.8, 0.35], abd: [0.12, 0.25], elbow: [0.3 + amp * 0.2, 2.3], poleBack: [0, 0], twist: -sw * 0.15 });
     w = 14;
+  } else if (S.mode === 'ski' && S.skins) { // skinning: long gliding strides, opposite pole planted
+    const amp = clamp(Math.abs(S.walkSpeed) / 1.2, 0, 1.2), sn = Math.sin(S.walkPh) * amp;
+    Object.assign(P, { kL: .25 + .1 * Math.max(0, sn), kR: .25 + .1 * Math.max(0, -sn), back: 0, pitch: 0.18, swing: [sn * 0.3, -sn * 0.3], armF: [0.45 - sn * 0.45, 0.45 + sn * 0.45], abd: [0.15, 0.15], elbow: [0.5, 0.5], poleBack: [0.3 + sn * 0.5, 0.3 - sn * 0.5], twist: sn * 0.08 });
+    w = 12;
   } else if (S.mode === 'board') {
     const b = S.board, l = S.lift, mv = Math.hypot(S.v.x, S.v.z);
     if (b.cab) { // skis on the shoulder, walking to the door
@@ -3390,6 +3569,9 @@ function animate(dt) {
     P.kL += comp; P.kR += comp; P.pitch += comp * 0.35;
     if (S.grab) { P.kL += 0.9; P.kR += 0.9; P.pitch += 0.3; }
   }
+  if (EQ().board && (S.mode === 'ski' || S.mode === 'board') && !S.onFoot) { // sideways stance on the board, feet apart, arms out for balance
+    P.bodyYaw = (P.bodyYaw || 0) + 1.25; P.splay = [0.24, 0.24]; P.skiYaw = [0, 0]; P.abd = [0.75 + Math.abs(S.edge) * 0.3, 0.75 + Math.abs(S.edge) * 0.3]; P.armF = [0.25, 0.25]; P.elbow = [0.35, 0.35]; P.poleBack = [0, 0];
+  }
   springPose(P, dt, w);
   applyPose();
   // place rig in world
@@ -3420,9 +3602,11 @@ function animate(dt) {
   const r = new THREE.Vector3().crossVectors(n, f).normalize();
   basisM.makeBasis(r, n, f); _q.setFromRotationMatrix(basisM); rigBaseQ.slerp(_q, Math.min(1, dt * 10)); R.quaternion.copy(rigBaseQ);
   if (S.flip && S.mode === 'ski') { _flipQ.setFromAxisAngle(_xAxis, -S.flip); R.quaternion.multiply(_flipQ); _pivot.set(0, 0.95, 0).applyQuaternion(rigBaseQ); _pivot2.set(0, 0.95, 0).applyQuaternion(R.quaternion); R.position.add(_pivot).sub(_pivot2); }
-  const inCab = (S.mode === 'lift' && !S.lift.spec.drag && S.lift.spec.carrier !== 'chair') || (S.mode === 'board' && S.board && S.board.cab);
-  const showSkis = !S.onFoot && !inCab;
-  rig.legs.forEach(l => l.skiG.visible = showSkis); rig.arms.forEach(a => a.pole.visible = showSkis);
+  const inCab = !!((S.mode === 'lift' && !S.lift.spec.drag && S.lift.spec.carrier !== 'chair') || (S.mode === 'board' && S.board && S.board.cab));
+  const board = !!(EQ().board && !S.onFoot && !inCab && S.mode !== 'crash');
+  const showSkis = !S.onFoot && !inCab && !EQ().board;
+  if (boardMesh) { boardMesh.visible = board; boardMesh.rotation.set(0, 0, -S.edge * 0.32); }
+  rig.legs.forEach(l => l.skiG.visible = showSkis); rig.arms.forEach(a => a.pole.visible = showSkis && !EQ().board);
   carried.visible = (S.onFoot && S.mode === 'ski') || inCab;
   rig.root.visible = camMode !== 1;
   updatePlayerCarrier();
@@ -3928,7 +4112,7 @@ function loadSave() { try { return JSON.parse(localStorage.getItem(SAVE_KEY) || 
 function writeSave() {
   if (!gameStarted || S.mode === 'crash') return;
   const prev = loadSave() || {};
-  const data = { x: Math.round(S.p.x * 10) / 10, z: Math.round(S.p.z * 10) / 10, yaw: S.yaw, hour: ENV.hour, day: ENV.day, weather: ENV.weather, fresh: ENV.fresh, danger: ENV.danger,
+  const data = { mapv: OSM.tx0 + ',' + OSM.ty0, x: Math.round(S.p.x * 10) / 10, z: Math.round(S.p.z * 10) / 10, yaw: S.yaw, hour: ENV.hour, day: ENV.day, weather: ENV.weather, fresh: ENV.fresh, danger: ENV.danger,
     maxSpd: Math.max(prev.maxSpd || 0, S.maxSpd), dist: (prev.dist || 0) + (STATS.dist - (STATS.savedDist || 0)), bestTrick: Math.max(prev.bestTrick || 0, STATS.bestTrick), savedAt: Date.now() };
   STATS.savedDist = STATS.dist;
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) { }
@@ -3941,7 +4125,7 @@ function saveTick(dt) {
 addEventListener('beforeunload', writeSave);
 
 // ---------- settings (saved in this browser) ----------
-const SETTINGS_DEFAULT = { graphics: 'standard', timeSpeed: 'x20', weather: 'auto', res: 'auto', shadows: 'high', view: 'medium', trees: 'high', fov: 62, shake: true, speedfx: true, snow: true, volume: 0.6, units: 'kmh', hud: true, minimap: true, labels: true, sens: 1 };
+const SETTINGS_DEFAULT = { equip: 'allmtn', jacket: '#c8102e', jacket2: '#1c2230', pants: '#252c38', helmet: '#f2f2f2', head: 'helmet', lens: 'orange', graphics: 'standard', timeSpeed: 'x20', weather: 'auto', res: 'auto', shadows: 'high', view: 'medium', trees: 'high', fov: 62, shake: true, speedfx: true, snow: true, volume: 0.6, units: 'kmh', hud: true, minimap: true, labels: true, sens: 1 };
 const settings = { ...SETTINGS_DEFAULT };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('arosa-davos-settings') || '{}')); } catch (e) { }
 function saveSettings() { try { localStorage.setItem('arosa-davos-settings', JSON.stringify(settings)); } catch (e) { } }
@@ -3965,6 +4149,7 @@ function applySettings() {
   if (lastTreeSetting !== null && lastTreeSetting !== settings.trees) updateNear(S.p.x, S.p.z, true);
   lastTreeSetting = settings.trees;
   $('hud').style.display = settings.hud ? '' : 'none';
+  applyGear();
   $('mini').style.display = settings.minimap ? '' : 'none';
   $('labels').style.display = settings.labels ? '' : 'none';
   $('speedfx').style.display = settings.speedfx ? '' : 'none';
@@ -3994,6 +4179,10 @@ const STARTS = [
   { name: 'Brüggerhorn · Black Diamond', area: 'Arosa', lift: /^Brüggerhorn$/, at: 'top', note: 'Entry to piste 12, the Black Diamond (up to 55 %).' },
   { name: 'Carmenna', area: 'Arosa', lift: /^Carmenna$/, at: 'top', note: 'Black 8 from the Weisshorn ridge, Carmennahütte.' },
   { name: 'Parpaner Rothorn', area: 'Lenzerheide', lift: /Rothorn 2/, at: 'top', note: 'Just below the Parpaner Rothorn (2,865 m), the highest point of the area.' },
+  { name: 'Stätzerhorn', area: 'Lenzerheide', lift: /^Stätzerhorn$/, at: 'top', note: 'West side of the valley: long reds back down to Valbella.' },
+  { name: 'Piz Scalottas', area: 'Lenzerheide', lift: /^Scalottas$/, at: 'top', note: 'Sunny slopes above Lenzerheide village.' },
+  { name: 'Heimberg', area: 'Lenzerheide', lift: /^Heimberg$/, at: 'top', note: 'Gentle blues between Valbella and Parpan.' },
+  { name: 'Lenzerheide village', area: 'Lenzerheide', lift: /^Rothorn 1$/, at: 'bottom', note: 'Valley station of the Rothorn gondola.' },
   { name: 'Urdenfürggli', area: 'Arosa ↔ Lenzerheide', lift: /Urdenbahn/, at: 'top', note: 'The cable car linking both valleys.' },
   { name: 'Weissfluh / Parsenn', area: 'Davos', lift: /Parsennhüttenbahn|Totalp/, at: 'top', note: 'Parsenn — long runs towards Davos and Klosters.' },
   { name: 'Jakobshorn', area: 'Davos', lift: /Jakobshornbahn Sektion 2/, at: 'top', note: 'Davos’ freestyle mountain above Davos Platz.' },
@@ -4002,6 +4191,8 @@ const STARTS = [
   { name: 'Gotschnagrat', area: 'Klosters', lift: /Gotschnaboden - Gotschnagrat/, at: 'top', note: 'Top of the Gotschna cable cars above Klosters.' },
   { name: 'Arosa village', area: 'Arosa', lift: /Weisshornbahn 1/, at: 'bottom', note: 'Valley station by the Obersee.' },
   { name: 'Davos Platz', area: 'Davos', lift: /Jakobshornbahn Sektion 1/, at: 'bottom', note: 'Valley station of the Jakobshorn.' },
+  { name: 'Madrisa', area: 'Klosters', lift: /^Madrisabahn$/, at: 'top', note: 'Saaseralp — the sunny family mountain above Klosters Dorf.' },
+  { name: 'Klosters Dorf', area: 'Klosters', lift: /^Madrisabahn$/, at: 'bottom', note: 'Valley station of the Madrisa gondola.' },
   { name: 'Klosters Platz', area: 'Klosters', lift: /Klosters - Gotschnaboden/, at: 'bottom', note: 'Valley station of the Gotschna cable car.' },
 ];
 function teleportBottom(l) {
@@ -4012,7 +4203,7 @@ function teleportBottom(l) {
 function buildStartMenu() {
   const grid = $('startGrid'); grid.innerHTML = '';
   const sv = loadSave();
-  if (sv && isFinite(sv.x) && inMap(sv.x, sv.z)) {
+  if (sv && isFinite(sv.x) && sv.mapv === OSM.tx0 + ',' + OSM.ty0 && inMap(sv.x, sv.z)) {     // positions from an older, smaller map don't carry over
     const b = document.createElement('button'); b.className = 'card'; b.style.borderColor = 'var(--accent)';
     b.innerHTML = `<div class="ca">Saved ${new Date(sv.savedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div><div class="cn">Continue where you left off</div><div class="cm">${Math.round(hAt(sv.x, sv.z)).toLocaleString('en')} m · ${regionOf(sv.x)} · day ${sv.day}, ${fmtH(sv.hour)}</div><div class="cd">Top speed ${Math.round(sv.maxSpd || 0)} km/h · ${((sv.dist || 0) / 1000).toFixed(1)} km skied${sv.bestTrick ? ' · best trick ' + sv.bestTrick + ' pts' : ''}</div>`;
     b.onclick = () => { placeAt(sv.x, sv.z, sv.yaw); ENV.hour = sv.hour; ENV.day = sv.day || 1; if (settings.weather === 'auto' && sv.weather) ENV.weather = sv.weather; ENV.fresh = sv.fresh ?? ENV.fresh; ENV.danger = sv.danger || ENV.danger; STATS.bestTrick = sv.bestTrick || 0; startGame(); };
@@ -4037,7 +4228,13 @@ function buildSettingsMenu() {
   const sel = (key, label, opts) => `<label><span>${label}</span><select data-k="${key}">${opts.map(([v, t]) => `<option value="${v}" ${String(settings[key]) === String(v) ? 'selected' : ''}>${t}</option>`).join('')}</select></label>`;
   const rng = (key, label, min, max, step) => `<label><span>${label} <em id="v_${key}">${settings[key]}</em></span><input type="range" data-k="${key}" min="${min}" max="${max}" step="${step}" value="${settings[key]}"></label>`;
   const chk = (key, label) => `<label class="chk"><input type="checkbox" data-k="${key}" ${settings[key] ? 'checked' : ''}><span>${label}</span></label>`;
-  f.innerHTML = `<h4>Graphics</h4>
+  const col = (key, label) => `<label><span>${label}</span><input type="color" data-k="${key}" value="${settings[key]}"></label>`;
+  f.innerHTML = `<h4>Gear</h4>
+    ${sel('equip', 'Equipment', Object.entries(EQUIP).map(([k, e]) => [k, e.name]))}
+    ${col('jacket', 'Jacket')}${col('jacket2', 'Jacket trim')}${col('pants', 'Trousers')}${col('helmet', 'Helmet')}
+    ${sel('head', 'Headwear', [['helmet', 'Helmet'], ['beanie', 'Beanie (bobble hat)']])}
+    ${sel('lens', 'Goggle lens', [['orange', 'Orange'], ['blue', 'Blue mirror'], ['silver', 'Silver mirror'], ['gold', 'Gold mirror'], ['green', 'Green mirror']])}
+    <h4>Graphics</h4>
     ${sel('graphics', 'Graphics', [['standard', 'Standard (fast)'], ['realistic', 'Realistic (sky, bloom, sharper shadows)']])}
     ${sel('res', 'Resolution', [['auto', 'Auto (keeps 60 fps)'], ['0.5', '50 %'], ['0.75', '75 %'], ['1', '100 %'], ['1.25', '125 %'], ['1.5', '150 %']])}
     ${sel('shadows', 'Shadows', [['off', 'Off'], ['low', 'Low'], ['high', 'High']])}
@@ -4103,7 +4300,7 @@ function drawMini() {
 // big map: zoom with the wheel / buttons / + -, drag to pan, click to drop in
 const big = $('bigmap').querySelector('canvas');
 const MV = { cx: 0, cz: 0, s: 0.08, down: null, moved: false };
-const VILLAGES = [['Arosa', 46.7783, 9.6790], ['Davos Platz', 46.7942, 9.8203], ['Davos Dorf', 46.8085, 9.8360], ['Klosters', 46.8693, 9.8806], ['Lenzerheide', 46.7280, 9.5584], ['Valbella', 46.7550, 9.5550], ['Parpan', 46.7614, 9.5654], ['Langwies', 46.8186, 9.7106], ['Frauenkirch', 46.7717, 9.7967], ['Glaris', 46.7460, 9.7880], ['Litzirüti', 46.7960, 9.7020]].map(([n, la, lo]) => { const [x, z] = ll2w(la, lo); return { n, x, z }; });
+const VILLAGES = [['Arosa', 46.7783, 9.6790], ['Davos Platz', 46.7942, 9.8203], ['Davos Dorf', 46.8085, 9.8360], ['Klosters', 46.8693, 9.8806], ['Lenzerheide', 46.7280, 9.5584], ['Valbella', 46.7550, 9.5550], ['Parpan', 46.7614, 9.5654], ['Langwies', 46.8186, 9.7106], ['Frauenkirch', 46.7717, 9.7967], ['Glaris', 46.7460, 9.7880], ['Litzirüti', 46.7960, 9.7020], ['Klosters Dorf', 46.8840, 9.8790], ['Churwalden', 46.7800, 9.5440], ['Tschiertschen', 46.8170, 9.6020], ['Lantsch/Lenz', 46.6840, 9.5630]].map(([n, la, lo]) => { const [x, z] = ll2w(la, lo); return { n, x, z }; });
 function openMap() { $('bigmap').style.display = 'block'; MV.cx = S.p.x; MV.cz = S.p.z; MV.s = 0.12; drawBigMap(); }
 function closeMap() { $('bigmap').style.display = 'none'; }
 function drawBigMap() {
@@ -4236,7 +4433,7 @@ addEventListener('resize', resize);
   buildLiftStatics(); buildCarriers(); buildLandmarks(); buildParkMeshes();
   await stage('Planting piste markers and forests…', 88);
   buildClearMask(); buildPisteDetails(); finalizeChunks();
-  buildFar(); buildNearGeometry(); buildTreeMesh(); buildAI(); buildCats(); buildAvalanche(); rollDanger();
+  buildFar(); buildNearGeometry(); buildTreeMesh(); buildAI(); buildCats(); buildAvalanche(); rollDanger(); buildGearVisuals();
   await stage('Drawing the map…', 95);
   buildMapCanvas(); buildTeleportMenu(); buildStartMenu(); buildSettingsMenu(); resize(); applySettings();
   const start = lifts.find(l => /Weisshornbahn 2/.test(l.name)) || lifts.sort((a, b) => b.top.y - a.top.y)[0];
@@ -4250,7 +4447,7 @@ addEventListener('resize', resize);
     // fixed-step physics (240 Hz), independent of the frame rate
     if (!window.__game.paused) { physAcc += dt; let k = 0; const h = 1 / PHYS.hz; while (physAcc >= h && k++ < 30) { step(h); physAcc -= h; } if (k >= 30) physAcc = 0; }
     updateNear(S.p.x, S.p.z);
-    animate(dt); updateSpray(dt); updateTracks(); updateTreeShadows(dt); updateFlakes(dt); updateAudio(); updateSounds(dt);
+    animate(dt); updateSpray(dt); updateTracks(); updateTreeShadows(dt); updateFlakes(dt); updateAudio(); updateSounds(dt); updateGearFrame(dt);
     updateEnv(dt); saveTick(dt); if (liftsRunning()) liftClock += dt;
     updateAI(dt); updateCats(dt); updateAvalanche(dt); updateLandmarks(dt);
     updateCarriers(liftClock, dt);
