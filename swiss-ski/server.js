@@ -1,6 +1,6 @@
 // Tiny static server (no dependencies): node server.js  ->  http://localhost:8642
 const http = require('http'), fs = require('fs'), path = require('path');
-const ROOT = __dirname, PORT = +process.env.PORT || 8642;
+const ROOT = __dirname, PORT = +process.argv[2] || +process.env.PORT || 8642;
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.png': 'image/png', '.json': 'application/json' };
 http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]);

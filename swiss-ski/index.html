@@ -407,7 +407,7 @@ function buildClearMask() {
   const c = m.getContext('2d'); c.fillStyle = '#000'; c.fillRect(0, 0, W, H); c.strokeStyle = c.fillStyle = '#fff'; c.lineCap = 'round'; c.lineJoin = 'round';
   for (const p of pistes) { pathOn(c, p.w, 1); if (p.a) { c.closePath(); c.fill(); } else { c.lineWidth = 46 / MPP; c.stroke(); } }
   for (const l of lifts) { pathOn(c, l.nodes.map(n => [n.x, n.z]), 1); c.lineWidth = (l.spec.gauge * 2 + 32) / MPP; c.stroke(); }
-  for (const b of buildings) { pathOn(c, b.pts, 1); c.closePath(); c.fill(); c.lineWidth = 12 / MPP; c.stroke(); }
+  for (const b of buildings) { if (b.removed) continue; pathOn(c, b.pts, 1); c.closePath(); c.fill(); c.lineWidth = 12 / MPP; c.stroke(); }
   for (const r of RAIL_CLEAR) { pathOn(c, r, 1); c.lineWidth = 10 / MPP; c.stroke(); }
   for (const r of obstacles) { pathOn(c, r, 1); c.closePath(); c.fill(); }
   const md = c.getImageData(0, 0, W, H).data; clearMask = new Uint8Array(W * H);
@@ -753,7 +753,7 @@ function snowMaterial(extra = {}) {
 uniform sampler2D uPiste; varying vec3 vWP; varying vec3 vWN;
 float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float vn2(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.-2.*f); return mix(mix(h21(i), h21(i+vec2(1,0)), f.x), mix(h21(i+vec2(0,1)), h21(i+vec2(1,1)), f.x), f.y); }
-float snowRel(vec2 q){ return vn2(q * 0.35) * 0.5 + vn2(q * 1.1) * 0.18 + vn2(vec2(dot(q, vec2(0.8, 0.6)) * 2.2, dot(q, vec2(-0.6, 0.8)) * 0.25)) * 0.12; }`)
+float snowRel(vec2 q){ return vn2(q * 0.22) * 0.5 + vn2(q * 0.6) * 0.15 + vn2(vec2(dot(q, vec2(0.8, 0.6)) * 0.9, dot(q, vec2(-0.6, 0.8)) * 0.3)) * 0.05; }`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 {
   float offp = 1.0 - smoothstep(0.45, 0.8, texture2D(uPiste, vMapUv).r);
@@ -761,7 +761,7 @@ float snowRel(vec2 q){ return vn2(q * 0.35) * 0.5 + vn2(q * 1.1) * 0.18 + vn2(ve
   if (offp * fade > 0.01) {
     vec2 q = mod(vWP.xz, 2048.0); float e = 0.3;
     float h0 = snowRel(q), hx = snowRel(q + vec2(e, 0.0)), hz = snowRel(q + vec2(0.0, e));
-    vec3 g = vec3(-(hx - h0) / e, 0.0, -(hz - h0) / e) * offp * fade * 1.6;
+    vec3 g = vec3(-(hx - h0) / e, 0.0, -(hz - h0) / e) * offp * fade * 0.45;
     normal = normalize(normal + (viewMatrix * vec4(g, 0.0)).xyz);
   }
 }`)
@@ -1061,6 +1061,7 @@ function pip(pts, x, z) { let c = false; for (let i = 0, j = pts.length - 1; i <
 function hitObstacle(x, z, y) {
   const l = collGrid.get(Math.floor(x / COLL) + ',' + Math.floor(z / COLL)); if (!l) return null;
   for (const o of l) {
+    if (o.b && o.b.removed) continue;
     if (o.r) { if (Math.hypot(o.x - x, o.z - z) < o.r && y < o.top) return o; }
     else if (y < o.top && pip(o.pts, x, z)) return o;
   }
@@ -1070,10 +1071,10 @@ function hitObstacle(x, z, y) {
 // ================= lifts =================
 // per-type physical parameters (station rope height, tower height, half rope spacing, clearance, sag, carrier spacing)
 const LIFT = {
-  cable_car:   { speed: 10,  ropeH: 8.0, towerH: 28, gauge: 5.5, minClear: 14, sag: 0.035, carrier: 'cablecar' },
-  gondola:     { speed: 6,   ropeH: 5.6, towerH: 14, gauge: 3.0, minClear: 7.5, sag: 0.012, carrier: 'gondola', spacing: 48 },
-  chair_lift:  { speed: 5,   ropeH: 4.7, towerH: 10, gauge: 2.9, minClear: 6.5, sag: 0.012, carrier: 'chair', spacing: 24 },
-  mixed_lift:  { speed: 5,   ropeH: 5.6, towerH: 13, gauge: 3.0, minClear: 7.5, sag: 0.012, carrier: 'gondola', spacing: 30 },
+  cable_car:   { speed: 10,  ropeH: 7.1, towerH: 28, gauge: 5.5, minClear: 14, sag: 0.035, carrier: 'cablecar' },
+  gondola:     { speed: 6,   ropeH: 3.9, towerH: 14, gauge: 3.0, minClear: 7.5, sag: 0.012, carrier: 'gondola', spacing: 48 },
+  chair_lift:  { speed: 5,   ropeH: 3.4, towerH: 10, gauge: 2.9, minClear: 6.5, sag: 0.012, carrier: 'chair', spacing: 24 },
+  mixed_lift:  { speed: 5,   ropeH: 3.9, towerH: 13, gauge: 3.0, minClear: 7.5, sag: 0.012, carrier: 'gondola', spacing: 30 },
   't-bar':     { speed: 3.2, ropeH: 4.6, towerH: 6.5, gauge: 1.5, minClear: 4.2, sag: 0.01, carrier: 'tbar', spacing: 14, drag: true },
   j_bar:       { speed: 3.2, ropeH: 4.6, towerH: 6.5, gauge: 1.5, minClear: 4.2, sag: 0.01, carrier: 'tbar', spacing: 14, drag: true },
   platter:     { speed: 3.2, ropeH: 4.6, towerH: 6.5, gauge: 1.5, minClear: 4.2, sag: 0.01, carrier: 'tbar', spacing: 14, drag: true },
@@ -1290,7 +1291,7 @@ function stationModel(B, l, end) {
   const d = end === 0 ? [-l.dirBottom[0], -l.dirBottom[1]] : l.dirTop;  // outward direction
   const yaw = Math.atan2(d[0], d[1]), gy = E.y, ry = gy + spec.ropeH, ca = Math.cos(yaw), sa = Math.sin(yaw);
   const P = (fwd, side) => [E.x + d[0] * fwd + ca * side, E.z + d[1] * fwd - sa * side]; // fwd along outward dir, side lateral
-  const hasOsm = buildings.some(b => b.station && Math.hypot(b.cx - E.x, b.cz - E.z) < 30);
+  const hasOsm = buildings.some(b => b.station && !b.removed && Math.hypot(b.cx - E.x, b.cz - E.z) < 30);
   const footprint = (fwd, side, w, len) => { const pts = []; for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) pts.push(P(fwd + a * len / 2, side + b * w / 2)); return pts; };
   if (spec.belt) {
     const n = l.center;
@@ -1489,6 +1490,27 @@ function shuttleU(l, t) {
   let u = ph < 1 ? clamp((ph * (travel + dwell) - dwell / 2) / travel, 0, 1) : 1 - clamp(((ph - 1) * (travel + dwell) - dwell / 2) / travel, 0, 1);
   return { u: u * u * (3 - 2 * u) * 0.9 + u * 0.1, up: ph < 1, wait: ph < 1 ? 0 : (2 - ph) * period / 2 + dwell / 2 };
 }
+// ---------- detachable chairs and gondolas: the grips let go of the rope in the stations, so carriers roll through
+// the terminals at walking pace and bunch up, then accelerate back to line speed ----------
+const DET_SLOW = { chair: 1.0, gondola: 0.7 };
+const isDet = l => l.spec.carrier === 'chair' || l.spec.carrier === 'gondola';
+const detCount = l => Math.floor(2 * l.len / l.spec.spacing);
+const loadS = l => l.spec.carrier === 'chair' ? 4 : l.spec.carrier === 'gondola' ? 5 : l.spec.drag ? 0.5 : 0;
+function detSpeed(l, s) { s = s % l.len; const V = l.spec.speed, vs = DET_SLOW[l.spec.carrier] || V, d = Math.min(s, l.len - s); return vs + (V - vs) * sstep(5, 20, d); }
+function detTable(l) { // time it takes a carrier to reach each point of a leg (0.5 m steps)
+  if (l.det) return l.det;
+  const ds = 0.5, n = Math.ceil(l.len / ds) + 1, tau = new Float32Array(n);
+  for (let i = 1; i < n; i++) tau[i] = tau[i - 1] + ds / detSpeed(l, Math.min(l.len - 0.01, (i - 0.5) * ds));
+  return (l.det = { tau, ds, n, leg: tau[n - 1] });
+}
+function detTau(l, s) { const D = detTable(l), f = clamp(s / D.ds, 0, D.n - 1.001), i = f | 0; return D.tau[i] + (D.tau[i + 1] - D.tau[i]) * (f - i); }
+function detS(l, t) { // loop position (0..2 len) of a carrier t seconds after it left the valley bullwheel
+  const D = detTable(l), T = 2 * D.leg; t = ((t % T) + T) % T;
+  const leg = t >= D.leg ? 1 : 0, tl = t - leg * D.leg; let lo = 0, hi = D.n - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (D.tau[m] <= tl) lo = m; else hi = m; }
+  const sv = (lo + clamp((tl - D.tau[lo]) / ((D.tau[hi] - D.tau[lo]) || 1), 0, 1)) * D.ds;
+  return Math.min(sv, l.len - 1e-3) + leg * l.len;
+}
 // ---------- opening hours: lifts run 08:30–16:30 (cable cars & funiculars 08:15–16:45) ----------
 let liftClock = 0;
 const liftsRunning = () => ENV.hour >= 8.25 && ENV.hour < 16.75;
@@ -1531,10 +1553,10 @@ function updateCarriers(t, dt) {
       }
       continue;
     }
-    const sp = l.spec.spacing, loop = 2 * l.len, k = Math.floor(loop / sp), off = (t * l.spec.speed) % sp;
+    const sp = l.spec.spacing, loop = 2 * l.len, det = isDet(l), k = det ? detCount(l) : Math.floor(loop / sp), off = (t * l.spec.speed) % sp, gap = det ? 2 * detTable(l).leg / k : 0;
     for (let c = 0; c < k; c++) {
-      const s = (c * sp + off) % loop;
-      if (S.mode === 'lift' && S.lift === l && Math.abs(s - S.liftS) < sp * 0.4) continue;  // your own chair / cabin is drawn separately
+      const s = det ? detS(l, t + c * gap) : (c * sp + off) % loop;
+      if (S.mode === 'lift' && S.lift === l && (S.slot >= 0 ? c === S.slot : Math.abs(s - S.liftS) < sp * 0.4)) continue;  // your own chair / cabin is drawn separately
       const yaw = carrierPose(l, s); const { x, y, z } = _cp;
       const d2 = (x - cx) * (x - cx) + (z - cz) * (z - cz);
       if (d2 > VIS[type]) continue;
@@ -1810,6 +1832,7 @@ function blackDiamondSign(p, B) {
   signQuad(B, bx - fx * 0.07, by + 2.1, bz - fz * 0.07, fx, fz, 1.8, 1.2, uv);
   window.__game && (window.__game.blackDiamond = blackDiamondInfo);
 }
+function liftEndsNear(x, z, r) { for (const l of lifts) for (const e of [l.nodes[0], l.nodes.at(-1)]) if (Math.abs(e.x - x) < r && Math.abs(e.z - z) < r) return true; return false; }
 function buildPisteDetails() {
   const poles = [], signs = new Builder();
   for (const p of pistes) {
@@ -1826,6 +1849,8 @@ function buildPisteDetails() {
         for (const side of route ? [0] : [-1, 1]) {
           const px = x + rx * side * 15, pz = z + rz * side * 15;
           if (hitObstacle(px, pz, -1e9)) continue;
+          const other = pisteNear(px, pz, 12); if (other && other !== p) continue;                // would stand in the middle of another piste
+          if (liftEndsNear(px, pz, 30)) continue;                                                   // loading / exit areas are kept clear
           const py = hAt(px, pz);
           poles.push([px, py, pz, route ? '#111111' : dcol, side === 1]); // right-hand poles (looking downhill) get an orange tip
           if (plate) signQuad(signs, px - fx * 0.05, py + 1.35, pz - fz * 0.05, fx, fz, route ? 0.42 : 0.34, route ? 0.42 : 0.34, uv);
@@ -2071,7 +2096,7 @@ let msgT = 0;
 function flash(t, dur = 2) { $('msg').textContent = t; $('msg').style.display = 'block'; msgT = dur; }
 function downhillYaw(x, z) { const n = normalBase(x, z); return Math.atan2(n.x, n.z); }
 function placeAt(x, z, yaw) {
-  S.p.set(x, hAt(x, z), z); S.prev.copy(S.p); S.v.set(0, 0, 0); S.yaw = yaw ?? downhillYaw(x, z); S.mode = 'ski'; S.grounded = true; S.lift = null;
+  S.p.set(x, hAt(x, z), z); S.prev.copy(S.p); S.v.set(0, 0, 0); S.yaw = yaw ?? downhillYaw(x, z); S.mode = 'ski'; S.grounded = true; S.lift = null; S.board = null; S.slot = -1; S.exitT = -1;
   S.steer = 0; S.yawRate = 0; S.walkSpeed = 0; S.edge = 0; S.latAcc = 0; S.hockey = false;
   if (RAG.active) endRagdoll();
   camDir.set(Math.sin(S.yaw), 0, Math.cos(S.yaw)); updateNear(x, z, true); trackBreak();
@@ -2092,11 +2117,43 @@ function tryLift() {
   const l = nearLift;
   if (!liftOpen(l)) { const sh = l.spec.carrier === 'cablecar' || l.spec.carrier === 'funicular'; flash(`${l.name} is closed — runs ${sh ? '08:15–16:45' : '08:30–16:30'} (now ${fmtH(ENV.hour)})`, 2.5); return; }
   S.mode = 'board'; S.lift = l; S.v.set(0, 0, 0); trackBreak();
-  pathAt(l.up, 0, liftPt, liftDir); S.yaw = Math.atan2(liftDir.x, liftDir.z);
-  const lx = liftPt.x - liftDir.x * 1.5, lz = liftPt.z - liftDir.z * 1.5; S.p.set(lx, hAt(lx, lz), lz);  // loading line
+  pathAt(l.up, loadS(l), liftPt, liftDir);
+  const yaw = Math.atan2(liftDir.x, liftDir.z), hl = Math.hypot(liftDir.x, liftDir.z) || 1, fx = liftDir.x / hl, fz = liftDir.z / hl, rx = -fz, rz = fx;
+  const cab = !l.spec.drag && l.spec.carrier !== 'chair';
+  // where you get picked up: under your seat on the chair, in the T-bar track, or on the platform beside the cabin door
+  let tx = liftPt.x, tz = liftPt.z;
+  if (l.spec.carrier === 'chair') { tx += Math.cos(yaw) * 0.3; tz -= Math.sin(yaw) * 0.3; }
+  else if (l.spec.drag) { tx += fx * 0.45; tz += fz * 0.45; }
+  else { const o = l.spec.carrier === 'cablecar' ? 2.5 : 1.9; tx += Math.cos(yaw) * o; tz -= Math.sin(yaw) * o; }
+  if (Math.hypot(S.p.x - tx, S.p.z - tz) > 25) { const sx = tx - fx * 6 + rx * 2.5, sz = tz - fz * 6 + rz * 2.5; S.p.set(sx, hAt(sx, sz), sz); } // through the gates behind the loading line
+  S.board = { ph: 'approach', t: 0, tx, tz, yaw, cab }; S.slot = -1; S.exitT = -1;
+}
+function startRide(l) {
+  S.mode = 'lift'; S.rideT = 0; S.exitT = -1; S.free = !!keys.KeyF; S.announce = 0; S.slot = -1;
+  S.shuttle = (l.spec.carrier === 'cablecar' || l.spec.carrier === 'funicular') && !S.free;
+  S.liftS = S.shuttle ? 0 : loadS(l);
+  if (isDet(l) && !S.free) { const k = detCount(l), T = 2 * detTable(l).leg, gap = T / k, m = (((detTau(l, loadS(l)) - liftClock) % T) + T) % T; S.slot = ((Math.round(m / gap) % k) + k) % k; }
+  S.boardFrom = S.p.clone();
+}
+function exitStep(l, dt) { // stand up off the chair / let go of the T-bar / walk out of the cabin
+  S.exitT += dt;
+  if (S.slot >= 0) { const T = 2 * detTable(l).leg; S.liftS = Math.min(l.len - 0.01, detS(l, liftClock + S.slot * T / detCount(l))); }
+  pathAt(l.up, Math.min(S.liftS, l.len - 0.01), liftPt, liftDir);
+  if (l.spec.drag || (l.spec.carrier === 'chair' && S.exitT >= 0.65)) leaveLift(l);
+  else if (l.spec.carrier !== 'chair' && S.exitT >= 1.3) { S.slot = -1; teleportTop(l); }     // out through the station building
+}
+function leaveLift(l) {
+  const hl = Math.hypot(liftDir.x, liftDir.z) || 1, fx = liftDir.x / hl, fz = liftDir.z / hl, yaw = Math.atan2(fx, fz);
+  let x = S.p.x, z = S.p.z;
+  if (l.spec.carrier === 'chair') { x = liftPt.x + Math.cos(yaw) * 0.3 + fx * 0.5; z = liftPt.z - Math.sin(yaw) * 0.3 + fz * 0.5; }
+  S.mode = 'ski'; S.lift = null; S.board = null; S.slot = -1; S.exitT = -1;
+  S.p.set(x, hAt(x, z), z); S.prev.copy(S.p); S.yaw = yaw; S.grounded = true; S.onFoot = false;
+  S.v.set(fx * 3.2, 0, fz * 3.2); S.steer = 0; S.yawRate = 0; S.edge = 0; S.latAcc = 0; trackBreak();       // push off down the exit ramp
+  flash(l.name + ' · ' + Math.round(S.p.y) + ' m', 2.2);
 }
 function boardWait(l) { // seconds until the next carrier reaches the loading point
   if (l.spec.carrier === 'cablecar' || l.spec.carrier === 'funicular') { const sh = shuttleU(l, liftClock); return sh.up && sh.u === 0 ? 0 : sh.up ? Infinity : sh.wait; }
+  if (isDet(l)) { const k = detCount(l), T = 2 * detTable(l).leg, gap = T / k, d = (((detTau(l, loadS(l)) - liftClock) % gap) + gap) % gap; return d < 0.03 ? 0 : d; }
   const sp = l.spec.spacing, off = (liftClock * l.spec.speed) % sp; return off < 0.25 ? 0 : (sp - off) / l.spec.speed;
 }
 function findNearLift() {
@@ -2114,22 +2171,37 @@ const liftPt = new THREE.Vector3(), liftDir = new THREE.Vector3();
 function step(dt) {
   if (S.mode === 'crash') { if (RAG.active) ragStep(dt); return; }
   if (S.mode === 'board') {
-    const l = S.lift; S.v.set(0, 0, 0);
-    if (!liftOpen(l)) { S.mode = 'ski'; flash(l.name + ' just closed', 2); return; }
-    if (boardWait(l) <= 0.02 || keys.KeyF) { S.mode = 'lift'; S.liftS = 0; S.shuttle = (l.spec.carrier === 'cablecar' || l.spec.carrier === 'funicular') && !keys.KeyF; S.announce = 0; }
+    const l = S.lift, b = S.board; b.t += dt; S.v.set(0, 0, 0);
+    if (!liftOpen(l)) { S.mode = 'ski'; S.board = null; flash(l.name + ' just closed', 2); return; }
+    if (b.ph === 'approach') { // skate / walk up to the loading line
+      const dx = b.tx - S.p.x, dz = b.tz - S.p.z, d = Math.hypot(dx, dz);
+      if (d < 0.05 || keys.KeyF) { S.p.set(b.tx, hAt(b.tx, b.tz), b.tz); b.ph = 'wait'; b.t = 0; }
+      else {
+        const v = Math.min(b.cab ? 1.3 : 1.7, 0.3 + d * 1.2); S.p.x += dx / d * v * dt; S.p.z += dz / d * v * dt; S.p.y = hAt(S.p.x, S.p.z); S.v.set(dx / d * v, 0, dz / d * v);
+        const want = d > 0.6 ? Math.atan2(dx, dz) : b.yaw; S.yaw += Math.atan2(Math.sin(want - S.yaw), Math.cos(want - S.yaw)) * Math.min(1, dt * 6);
+      }
+      return;
+    }
+    S.yaw += Math.atan2(Math.sin(b.yaw - S.yaw), Math.cos(b.yaw - S.yaw)) * Math.min(1, dt * 6);
+    if (boardWait(l) <= 0.02 || keys.KeyF) startRide(l);
     return;
   }
   if (S.mode === 'lift') {
-    const l = S.lift, sp = l.spec.speed * (keys.KeyF ? 8 : 1);
-    if (keys.KeyF) S.shuttle = false;
-    if (S.shuttle) { const sh = shuttleU(l, liftClock); S.liftS = sh.u * l.len; if (!sh.up || sh.u >= 0.999) S.liftS = l.len; }
-    else S.liftS += sp * dt;
-    if (S.liftS >= l.len - 2) { teleportTop(l); return; }
-    pathAt(l.up, S.liftS, liftPt, liftDir);
+    const l = S.lift; S.rideT += dt;
+    if (keys.KeyF && !S.free) { S.free = true; S.slot = -1; S.shuttle = false; }
+    if (S.exitT >= 0) { exitStep(l, dt); return; }
+    let sp;
+    if (S.shuttle) { const sh = shuttleU(l, liftClock); S.liftS = sh.u * l.len; if (!sh.up || sh.u >= 0.999) S.liftS = l.len; sp = sh.u > 0 && sh.u < 0.999 ? l.spec.speed : 0; }
+    else if (S.slot >= 0) { const T = 2 * detTable(l).leg; S.liftS = Math.min(l.len, detS(l, liftClock + S.slot * T / detCount(l))); sp = detSpeed(l, S.liftS); }
+    else if (l.spec.drag && !keys.KeyF) { sp = Math.min(l.spec.speed, 0.5 + S.rideT * 1.4); S.liftS += sp * dt; }   // the T-bar takes up the slack, then pulls
+    else { sp = l.spec.speed * (keys.KeyF ? 8 : 1); S.liftS += sp * dt; }
+    const exitAt = l.spec.carrier === 'chair' ? l.len - 5 : l.spec.drag ? l.len - 2.5 : l.len - (S.shuttle ? 0.5 : 4);
+    if (S.liftS >= exitAt) { if (S.free && keys.KeyF) { teleportTop(l); return; } S.exitT = 0; }
+    pathAt(l.up, Math.min(S.liftS, l.len - 0.01), liftPt, liftDir);
     S.yaw = Math.atan2(liftDir.x, liftDir.z);
     if (l.spec.drag) { S.p.set(liftPt.x + liftDir.x * 0.45, 0, liftPt.z + liftDir.z * 0.45); S.p.y = hAt(S.p.x, S.p.z); }
     else S.p.copy(liftPt);
-    S.v.copy(liftDir).multiplyScalar(sp);
+    S.v.copy(liftDir).multiplyScalar(sp || 0);
     return;
   }
   const steerIn = (keys.KeyA || keys.ArrowLeft ? 1 : 0) - (keys.KeyD || keys.ArrowRight ? 1 : 0);
@@ -2712,6 +2784,17 @@ const LM_STYLE = {
   arena: { lower: [FL.larch, '#ffffff'] },                          // wooden hall of HC Davos
   church: { lower: [FL.bund, '#f6f3ea'] },
 };
+// chairlift and T-bar terminals are open steel structures (drawn by stationModel); an OSM 'station' building that the
+// lift line runs into would be a solid block with windows that the chairs drive through, so it is left out
+function clearLiftStations() {
+  let n = 0;
+  for (const b of buildings) {
+    if (!b.station || b.rest || b.area > 2500) continue;
+    const hit = lifts.some(l => (l.spec.carrier === 'chair' || l.spec.drag) && [l.nodes[0], l.nodes.at(-1)].some(e => pip(b.pts, e.x, e.z) || Math.hypot(e.x - b.cx, e.z - b.cz) < 16 + Math.sqrt(b.area) / 2));
+    if (hit) { b.removed = true; n++; }
+  }
+  console.log('lift stations: ' + n + ' solid OSM buildings replaced by open terminals');
+}
 function markLandmarkBuildings() {
   const inside = (polys, b) => polys.some(g => pip(g, b.cx, b.cz));
   const sz = O3.schatzalp.map(s => s.g.map(([la, lo]) => ll2w(la, lo)));
@@ -3226,12 +3309,34 @@ function animate(dt) {
       back: 0, pitch: 0.08 + amp * 0.06, lift: 0.03 * amp * Math.abs(Math.cos(ph)), swing: [sw, -sw], roll: Math.sin(ph) * 0.03 * amp,
       armF: [0.1 - sw * 0.8, 0.35], abd: [0.12, 0.25], elbow: [0.3 + amp * 0.2, 2.3], poleBack: [0, 0], twist: -sw * 0.15 });
     w = 14;
+  } else if (S.mode === 'board') {
+    const b = S.board, l = S.lift, mv = Math.hypot(S.v.x, S.v.z);
+    if (b.cab) { // skis on the shoulder, walking to the door
+      const amp = clamp(mv / 1.4, 0, 1.2); if (amp > 0.05) S.walkPh += dt * (3 + mv * 2.4);
+      const ph = S.walkPh, sw = Math.sin(ph) * 0.4 * amp;
+      Object.assign(P, { kL: 0.1 + amp * 0.55 * Math.max(0, Math.sin(ph + 1.3)), kR: 0.1 + amp * 0.55 * Math.max(0, Math.sin(ph + 1.3 + Math.PI)), back: 0, pitch: 0.08, swing: [sw, -sw], armF: [0.1 - sw * 0.8, 0.35], abd: [0.12, 0.25], elbow: [0.3, 2.3], poleBack: [0, 0] }); w = 14;
+    } else if (mv > 0.15) { // skating up to the line, pushing with the poles
+      const ph = animT * 5.5, sn = Math.sin(ph);
+      Object.assign(P, { kL: .42 + .14 * sn, kR: .42 - .14 * sn, pitch: .32, roll: sn * 0.06, armF: [.75 + .35 * sn, .75 - .35 * sn], elbow: [.6, .6], abd: [.22, .22], poleBack: [.15 - .3 * sn, .15 + .3 * sn] }); w = 12;
+    } else { // at the line: poles in one hand, looking back over the shoulder for the chair / T-bar
+      const look = sstep(0.2, 0.9, b.t);
+      Object.assign(P, { kL: .32, kR: .32, pitch: .12, armF: [.35, .55], elbow: [.5, .9], abd: [.2, .3], poleBack: [.6, .9], head: 1.1 * look, twist: 0.3 * look }); w = 8;
+    }
   } else if (S.mode === 'lift') {
     const l = S.lift;
+    if (l.spec.carrier === 'chair' && (S.rideT < 1 || S.exitT >= 0)) { // sitting down as the seat scoops you up / standing up at the top
+      const sb = S.exitT >= 0 ? 1 - sstep(0, 0.55, S.exitT) : sstep(0.02, 0.55, S.rideT);
+      Object.assign(P, { seated: sb, kL: .45 + .4 * sb, kR: .45 + .4 * sb, pitch: 0.25 - 0.3 * sb, armF: [0.5 + 0.4 * sb, 0.5 + 0.4 * sb], elbow: [0.6, 0.6], abd: [0.15, 0.15], poleBack: [0.6 + 0.4 * sb, 0.6 + 0.4 * sb], head: S.exitT >= 0 ? 0 : 0.6 * (1 - sb) });
+      w = 16;
+    } else if (!l.spec.drag && l.spec.carrier !== 'chair') { // in a cabin: walking in / out, otherwise standing with the skis on the shoulder
+      const walking = S.rideT < 1.1 || S.exitT >= 0, ph = (S.walkPh += walking ? dt * 5.5 : 0), sw = walking ? Math.sin(ph) * 0.3 : 0;
+      Object.assign(P, { kL: walking ? 0.1 + 0.4 * Math.max(0, Math.sin(ph + 1.3)) : 0.12, kR: walking ? 0.1 + 0.4 * Math.max(0, Math.sin(ph + 1.3 + Math.PI)) : 0.12, back: 0, pitch: 0.05, swing: [sw, -sw], armF: [0.1 - sw * 0.8, 0.35], abd: [0.12, 0.25], elbow: [0.3, 2.3], poleBack: [0, 0], head: walking ? 0 : Math.sin(animT * 0.25) * 0.6 });
+      w = walking ? 14 : 6;
+    } else
     if (l.spec.drag) Object.assign(P, { kL: .45, kR: .45, back: -0.03, pitch: -0.1, armF: [1.0, 0.9], elbow: [0.4, 0.5], abd: [0.1, 0.15], poleBack: [1.3, 1.3], head: Math.sin(animT * 0.3) * 0.3 });
     else if (l.spec.carrier === 'chair') Object.assign(P, { seated: 1, pitch: -0.08, armF: [0.9, 0.9], elbow: [0.6, 0.6], abd: [0.15, 0.15], poleBack: [1.0, 1.0], head: Math.sin(animT * 0.25) * 0.5 });
     else Object.assign(P, { kL: .12, kR: .12, back: 0, pitch: 0.02, armF: [0.15, 0.1], elbow: [0.4, 0.3], abd: [0.12, 0.12], poleBack: [0.1, 0.1], head: Math.sin(animT * 0.25) * 0.6 });
-    w = 6;
+    if (!(l.spec.carrier === 'chair' && (S.rideT < 1 || S.exitT >= 0)) && !(!l.spec.drag && l.spec.carrier !== 'chair')) w = 6;
   } else if (S.mode === 'crash') {
     const t = 2.2 - S.crashT; w = 14;
     if (t < 1.0) { P.tumbleX = (pose.tumbleX + dt * 9 * (1 - t)); P.tumbleZ = Math.sin(t * 7) * 0.8; Object.assign(P, { kL: 1.2, kR: .5, armF: [1.8, -0.3], abd: [1.2, 1.0], elbow: [0.3, 1.2] }); w = 22; }
@@ -3294,10 +3399,17 @@ function animate(dt) {
     const l = S.lift;
     n = _up;
     if (l.spec.drag) R.position.copy(S.p);
-    else if (l.spec.carrier === 'chair') { const yaw = S.yaw; R.position.set(liftPt.x + Math.cos(yaw) * 0.3, liftPt.y - 2.77, liftPt.z - Math.sin(yaw) * 0.3); }
-    else if (l.spec.carrier === 'gondola') R.position.set(liftPt.x, liftPt.y - 3.62, liftPt.z);
-    else if (l.spec.carrier === 'funicular') R.position.set(liftPt.x, liftPt.y + 0.1, liftPt.z);
-    else R.position.set(liftPt.x, liftPt.y - 6.75, liftPt.z);
+    else if (l.spec.carrier === 'chair') {
+      const yaw = S.yaw, sx = liftPt.x + Math.cos(yaw) * 0.3, sz = liftPt.z - Math.sin(yaw) * 0.3, seatY = liftPt.y - 2.77;
+      const sb = S.exitT >= 0 ? 1 - sstep(0, 0.55, S.exitT) : sstep(0.02, 0.55, S.rideT);       // feet on the snow -> seated
+      R.position.set(sx, hAt(sx, sz) + 0.1 + (seatY - hAt(sx, sz) - 0.1) * sb, sz);
+    } else {
+      const floor = l.spec.carrier === 'gondola' ? -3.62 : l.spec.carrier === 'funicular' ? 0.1 : -6.75, yaw = S.yaw, o = l.spec.carrier === 'cablecar' ? 2.5 : 1.9;
+      const cx = liftPt.x, cy = liftPt.y + floor, cz = liftPt.z;
+      const walkIn = sstep(0, 1.1, S.rideT), walkOut = S.exitT >= 0 ? sstep(0, 1.1, S.exitT) : 0, door = (1 - walkIn) + walkOut; // 1 = on the platform beside the door
+      const px = cx + Math.cos(yaw) * o, pz = cz - Math.sin(yaw) * o, py = l.spec.carrier === 'funicular' ? cy : Math.max(cy, hAt(px, pz) + 0.04);
+      R.position.set(cx + (px - cx) * door, cy + (py - cy) * door, cz + (pz - cz) * door);
+    }
   } else { // follow the physics body; height is eased so small terrain steps don't jolt the skier
     const ty = S.p.y + (S.onFoot ? 0.04 : 0.1);
     const jump = Math.abs(R.position.x - S.p.x) + Math.abs(R.position.z - S.p.z) > 5;
@@ -3308,9 +3420,10 @@ function animate(dt) {
   const r = new THREE.Vector3().crossVectors(n, f).normalize();
   basisM.makeBasis(r, n, f); _q.setFromRotationMatrix(basisM); rigBaseQ.slerp(_q, Math.min(1, dt * 10)); R.quaternion.copy(rigBaseQ);
   if (S.flip && S.mode === 'ski') { _flipQ.setFromAxisAngle(_xAxis, -S.flip); R.quaternion.multiply(_flipQ); _pivot.set(0, 0.95, 0).applyQuaternion(rigBaseQ); _pivot2.set(0, 0.95, 0).applyQuaternion(R.quaternion); R.position.add(_pivot).sub(_pivot2); }
-  const showSkis = !S.onFoot && !(S.mode === 'lift' && !S.lift.spec.drag && S.lift.spec.carrier !== 'chair');
+  const inCab = (S.mode === 'lift' && !S.lift.spec.drag && S.lift.spec.carrier !== 'chair') || (S.mode === 'board' && S.board && S.board.cab);
+  const showSkis = !S.onFoot && !inCab;
   rig.legs.forEach(l => l.skiG.visible = showSkis); rig.arms.forEach(a => a.pole.visible = showSkis);
-  carried.visible = S.onFoot && S.mode === 'ski';
+  carried.visible = (S.onFoot && S.mode === 'ski') || inCab;
   rig.root.visible = camMode !== 1;
   updatePlayerCarrier();
 }
@@ -3968,7 +4081,7 @@ function buildMapCanvas() {
     const k = (j * mw + i) * 4, sc = 0.55 + sh * 0.6; d[k] = r * sc; d[k + 1] = g * sc; d[k + 2] = b * sc; d[k + 3] = 255;
   }
   c.putImageData(img, 0, 0); c.lineCap = c.lineJoin = 'round';
-  c.fillStyle = '#7d6a5a'; for (const b of buildings) { pathOn(c, b.pts, s); c.closePath(); c.fill(); }
+  c.fillStyle = '#7d6a5a'; for (const b of buildings) { if (b.removed) continue; pathOn(c, b.pts, s); c.closePath(); c.fill(); }
   for (const p of pistes) { pathOn(c, p.w, s); if (p.a) { c.closePath(); c.globalAlpha = .25; c.fillStyle = diffOf(p.d).col; c.fill(); c.globalAlpha = 1; } else { c.strokeStyle = diffOf(p.d).col; c.lineWidth = 2.5; c.stroke(); } }
   for (const l of lifts) { pathOn(c, l.nodes.map(n => [n.x, n.z]), s); c.strokeStyle = '#000'; c.lineWidth = 1.6; c.setLineDash([5, 3]); c.stroke(); c.setLineDash([]); }
   c.fillStyle = '#5a3a22'; for (const r of restaurants) { const x = (r.cx / MPP + W / 2) * s, y = (r.cz / MPP + H / 2) * s; c.beginPath(); c.arc(x, y, 3, 0, 7); c.fill(); }
@@ -4004,7 +4117,7 @@ function drawBigMap() {
   c.lineCap = c.lineJoin = 'round';
   const path = pts => { c.beginPath(); pts.forEach(([x, z], i) => i ? c.lineTo(sx(x), sz(z)) : c.moveTo(sx(x), sz(z))); };
   const vis = (x, z, m = 200) => { const X = sx(x), Z = sz(z); return X > -m && Z > -m && X < Wc + m && Z < Hc + m; };
-  if (MV.s > 0.25) { c.fillStyle = '#6e5b4c'; for (const b of buildings) if (vis(b.cx, b.cz)) { path(b.pts); c.closePath(); c.fill(); } }
+  if (MV.s > 0.25) { c.fillStyle = '#6e5b4c'; for (const b of buildings) if (!b.removed && vis(b.cx, b.cz)) { path(b.pts); c.closePath(); c.fill(); } }
   const lw = clamp(MV.s * 10, 1.5, 7) * dpr;
   for (const p of pistes) { if (p.a) continue; if (!p.w.some(([x, z]) => vis(x, z, 400))) continue; path(p.w); c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = lw + 2 * dpr; c.stroke(); c.strokeStyle = diffOf(p.d).col; c.lineWidth = lw; if (!isGroomed(p)) c.setLineDash([6 * dpr, 5 * dpr]); c.stroke(); c.setLineDash([]); }
   for (const l of lifts) { path(l.nodes.map(n => [n.x, n.z])); c.strokeStyle = '#111'; c.lineWidth = 1.6 * dpr; c.setLineDash([7 * dpr, 4 * dpr]); c.stroke(); c.setLineDash([]); }
@@ -4117,8 +4230,8 @@ addEventListener('resize', resize);
   await stage('Surveying lift lines…', 62);
   layoutLifts();
   await stage('Placing 14,800 buildings and mountain restaurants…', 68);
-  prepBuildings(); markLandmarkBuildings();
-  for (const b of buildings) buildBuildingGeometry(b);
+  prepBuildings(); clearLiftStations(); markLandmarkBuildings();
+  for (const b of buildings) if (!b.removed) buildBuildingGeometry(b);
   await stage('Erecting pylons, stations and ropes…', 80);
   buildLiftStatics(); buildCarriers(); buildLandmarks(); buildParkMeshes();
   await stage('Planting piste markers and forests…', 88);
