@@ -2131,7 +2131,7 @@ function flash(t, dur = 2) { $('msg').textContent = t; $('msg').style.display = 
 function downhillYaw(x, z) { const n = normalBase(x, z); return Math.atan2(n.x, n.z); }
 function placeAt(x, z, yaw) {
   S.p.set(x, hAt(x, z), z); S.prev.copy(S.p); S.v.set(0, 0, 0); S.yaw = yaw ?? downhillYaw(x, z); S.mode = 'ski'; S.grounded = true; S.lift = null; S.board = null; S.slot = -1; S.exitT = -1;
-  S.steer = 0; S.yawRate = 0; S.walkSpeed = 0; S.edge = 0; S.latAcc = 0; S.hockey = false;
+  S.steer = 0; S.yawRate = 0; S.walkSpeed = 0; S.edge = 0; S.edgeV = 0; S.hold = 0; S.latAcc = 0; S.hockey = false;
   if (RAG.active) endRagdoll();
   camDir.set(Math.sin(S.yaw), 0, Math.cos(S.yaw)); updateNear(x, z, true); trackBreak();
 }
@@ -2242,7 +2242,7 @@ function step(dt) {
   const steerIn = (keys.KeyA || keys.ArrowLeft ? 1 : 0) - (keys.KeyD || keys.ArrowRight ? 1 : 0);
   const brake = keys.KeyS || keys.ArrowDown, tuck = keys.KeyW || keys.ArrowUp, stopKey = keys.KeyQ;
   // smooth steering: the input eases in and out instead of snapping
-  S.steer += (steerIn - S.steer) * Math.min(1, dt * 4.5);
+  S.steer += (steerIn - S.steer) * Math.min(1, dt * 8);
   if (!inMap(S.p.x, S.p.z)) { S.p.x = clamp(S.p.x, -WW / 2 + 60, WW / 2 - 60); S.p.z = clamp(S.p.z, -HH / 2 + 60, HH / 2 - 60); S.v.set(0, 0, 0); }
   S.prev.copy(S.p);
   if (S.onFoot) { walkStep(dt, steerIn, tuck, brake); collide(); return; }
@@ -2251,23 +2251,28 @@ function step(dt) {
   const spd = S.v.length();
   S.tuck += ((tuck && spd > 9 ? 1 : 0) - S.tuck) * Math.min(1, dt * 5);
   const groomed = sstep(0.35, 0.75, pmAt(S.p.x, S.p.z)), groomK = (0.55 + 0.45 * groomed) * (ENV.condGrip + (1 - ENV.condGrip) * EQ().ice); // edge hold: corduroy vs powder, icy mornings (race skis still bite)
-  // edges are rolled on progressively (~0.5 s to full edge) — turns have to be built, they don't snap
-  S.edge += clamp(steerIn - S.edge, -dt * 2.2 * EQ().roll, dt * 2.2 * EQ().roll);
+  // The edge angle follows the key like a critically damped spring: it reacts at once, eases into the turn without a jerk and never
+  // overshoots; releasing the key straightens the skis just as smoothly. Holding the key keeps tightening the turn a little
+  // (70 % edge straight away, full edge after about 0.7 s), a short tap gives a small correction.
+  if (steerIn && Math.sign(S.hold || 0) !== steerIn) S.hold = 0;
+  S.hold = steerIn ? Math.min(1, Math.abs(S.hold || 0) + dt / 0.7) * steerIn : (S.hold || 0) * Math.exp(-dt * 5);
+  { const w0 = 15 * Math.sqrt(EQ().roll), tgt = steerIn ? steerIn * (0.7 + 0.3 * Math.abs(S.hold)) : 0;
+    S.edgeV = (S.edgeV || 0) + (w0 * w0 * (tgt - S.edge) - 2 * w0 * (S.edgeV || 0)) * dt; S.edge = clamp(S.edge + S.edgeV * dt, -1, 1); }
   if (steerIn) S.lastSteerSign = steerIn;
   const hockey = S.grounded && stopKey && spd > 2.5;       // Q: hockey stop · S: pizza (snowplough)
   let wantYawRate;
   if (!S.grounded) wantYawRate = S.steer * (PARK.near || S.airT > 0.5 ? 4.6 : 2.2);                     // spin in the air
   else {
-    const pivot = S.edge * 1.2 * EQ().pivot;                                      // slow speed: skidded pivot turns
-    const radius = EQ().radius / Math.max(0.08, Math.abs(S.edge));            // carving: ~12 m radius at full edge, wide arcs with a little edge
-    const carve = Math.sign(S.edge) * spd / radius;
-    const aMax = G * (0.55 + 0.95 * groomK) * EQ().grip;                         // what the edges can hold (~1.5 g groomed, ~1.1 g powder)
-    const lim = aMax / Math.max(spd, 0.5);
-    let w = carve; if (Math.abs(w) > lim) w = Math.sign(w) * (lim + (Math.abs(w) - lim) * 0.25); // asking for more: the skis skid
-    const t = sstep(2, 7, spd);
-    wantYawRate = (pivot * (1 - t) + w * t) * (brake ? 0.55 : 1);  // in a wedge you steer by weighting one ski: slower turns
+    const pivot = S.edge * 1.7 * EQ().pivot;                                       // slow speed: quick skidded pivot turns
+    // turn rate per unit of edge: brisk when slow, flattening out with speed (a fast turn is a long turn, not a twitchy one),
+    // scaled by the sidecut of the gear
+    const wMax = (1.0 + 0.55 * Math.exp(-spd / 9)) * Math.pow(14 / EQ().radius, 0.6), wDes = S.edge * wMax;
+    const aMax = G * (0.65 + 1.1 * groomK) * EQ().grip;                              // what the edges can hold: ~1.7 g on corduroy, ~1.1 g in powder or on ice
+    const lim = aMax / Math.max(spd, 0.5), w = lim * Math.tanh(wDes / lim);          // soft limit: asking for more only makes the turn wider
+    const t = sstep(1.5, 4.5, spd);
+    wantYawRate = (pivot * (1 - t) + w * t) * (brake ? 0.55 : 1);                    // in a wedge you steer by weighting one ski: slower turns
   }
-  S.yawRate += (wantYawRate - S.yawRate) * Math.min(1, dt * 5);
+  S.yawRate += (wantYawRate - S.yawRate) * Math.min(1, dt * 16);
   { const st = EQ().stable / 3.6; if (S.grounded && spd > st) S.yawRate += (Math.random() - 0.5) * 0.04 * (spd - st); } // short / soft skis get nervous at high speed
   if (!hockey) S.yaw += S.yawRate * dt;
   S.latAcc = S.grounded && !hockey ? S.yawRate * spd : 0;

@@ -27,6 +27,15 @@
         "8644"
       ],
       "port": 8644
+    },
+    {
+      "name": "ski-test3",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "swiss-ski/server.js",
+        "8645"
+      ],
+      "port": 8645
     }
   ]
 }
