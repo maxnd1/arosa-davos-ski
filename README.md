@@ -8,6 +8,10 @@ A browser ski game set in a 1:1 recreation of **Arosa Lenzerheide** (both sides 
 - Time of day, changing weather and snow conditions, avalanche danger, other skiers and a ski school, snow groomers in the evening, lift opening hours, sounds, saved progress
 - Gear: all-mountain, slalom, powder or touring skis, or a snowboard, each with its own handling; jacket, trousers, helmet or beanie and goggle lens of your choice
 - Ski touring with skins, and an avalanche transceiver search drill
+- Race mode on 13 real race pistes (World Cup course Silvano Beltrametti, Pedra Grossa, slalom hill ...): start portal, gates, finish, penalties, best times and a ghost of your best run (T menu → Race courses)
+- A bad crash (about 40 km/h or faster) means you cannot just get up: the ski patrol skis down to you and takes you to a valley station, after a really bad one a rescue helicopter flies you out
+- Deep powder off the pistes: you sink in and it drags and sprays; speed and wide skis keep you afloat
+- Quality presets (Low to Ultra) and a frame-rate counter (F3)
 - Standard or realistic graphics (physical sky, bloom, sharper shadows) in the settings; physically based snow with glinting crystals
 - Three.js renderer, no build step
 
@@ -49,7 +53,8 @@ It cuts the real ragdoll code out of `swiss-ski/index.html` and drops the body o
 | E | ride the lift you are standing at |
 | F | fast-forward the lift |
 | K | take skis off / put them on (walk with W, jog with Shift) |
-| R | after a fall: get back up with your skis on |
+| R | after a minor fall: get back up with your skis on (a bad crash needs the ski patrol) |
+| F3 | show / hide the frame rate |
 | T | teleport to a lift top or restaurant |
 | M | map: scroll or + / − to zoom, drag to pan, click to drop in |
 | C | camera mode |

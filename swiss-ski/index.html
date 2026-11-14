@@ -123,7 +123,8 @@
       <tr><td><b>G</b></td><td>Touring skis: skins on / off — walk uphill with W (Shift faster)</td></tr>
       <tr><td><b>B</b> / <b>P</b></td><td>Avalanche transceiver drill: find the buried beacon, then probe and dig (P)</td></tr>
       <tr><td><b>K</b></td><td>Take your skis off and walk (W, Shift to jog) · put them back on</td></tr>
-      <tr><td><b>R</b></td><td>After a fall: get back up with your skis on</td></tr>
+      <tr><td><b>R</b></td><td>After a minor fall: get back up with your skis on. After a bad crash the ski patrol comes for you</td></tr>
+      <tr><td><b>F3</b></td><td>Show the frame rate (Settings → Quality preset for Low / Medium / High / Ultra)</td></tr>
       <tr><td><b>T</b> / <b>M</b></td><td>Teleport list · zoomable map (scroll, drag, click to drop in)</td></tr>
       <tr><td><b>C</b></td><td>Camera: follow · first person · high</td></tr>
       <tr><td><b>Page Up</b> / <b>Page Down</b> · wheel</td><td>Zoom the camera · drag the mouse to look around</td></tr>
@@ -1979,6 +1980,7 @@ function makeRig() {
     jacket: std('#c8102e', 0.55), jacket2: std('#1c2230', 0.65), pants: std('#252c38', 0.85), boot: std('#eceef0', 0.32), bootDark: std('#23272d', 0.45),
     buckle: std('#a3acb6', 0.3, 0.85), skin: std('#e0ae8a', 0.8), helmet: std('#f2f2f2', 0.22), goggle: std('#ff7a1a', 0.12, 0.85, { side: THREE.DoubleSide }),
     strap: std('#1a1a1a', 0.75, 0, { side: THREE.DoubleSide }), glove: std('#151515', 0.6), pole: std('#c3c9d0', 0.28, 0.9), grip: std('#1b1b1b', 0.85),
+    basket: std('#d9b83a', 0.45, 0.35), gstrap: std('#e8e8ea', 0.6),
     binding: std('#2c3036', 0.4, 0.35), bindingRed: std('#c8102e', 0.4), skiTop: new THREE.MeshStandardMaterial({ map: skiTopTexture(), roughness: 0.32 }), skiEdge: std('#141618', 0.45, 0.6),
   };
   const mesh = (geo, mat, parent, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m; };
@@ -2014,13 +2016,18 @@ function makeRig() {
   mesh(new THREE.BoxGeometry(0.1, 0.075, 0.012), mats.jacket2, spine, 0.075, 0.37, 0.142);
   mesh(cap(0.095, 0.2), mats.jacket2, spine, 0, 0.3, -0.16).scale.set(1.25, 1, 0.42);
   for (const s of [-1, 1]) mesh(new THREE.BoxGeometry(0.035, 0.36, 0.02), mats.strap, spine, 0.1 * s, 0.33, 0.128).rotation.x = -0.12;
+  { // hood bunched up behind the neck (it sits on the spine, so it does not turn with the head), with the gathered rim and two drawcord toggles
+    const hood = mesh(new THREE.SphereGeometry(0.155, 20, 14, 0, Math.PI * 2, 0, 2.5), mats.jacket, spine, 0, 0.64, -0.07); hood.scale.set(1.15, 1.0, 0.82); hood.rotation.x = 0.35;
+    const rim = mesh(new THREE.TorusGeometry(0.135, 0.02, 8, 24), mats.jacket, spine, 0, 0.63, 0.045); rim.rotation.x = 1.25; rim.scale.set(1, 1.1, 1);
+    for (const sd of [-1, 1]) mesh(new THREE.SphereGeometry(0.014, 8, 6), mats.buckle, spine, 0.075 * sd, 0.56, 0.12);
+  }
   const neck = new THREE.Group(); neck.position.y = 0.6; spine.add(neck);
   mesh(new THREE.CylinderGeometry(0.072, 0.07, 0.13, 18).translate(0, 0.05, 0.004), mats.jacket2, neck).scale.set(1, 1, 1.12);   // neck gaiter pulled up over the chin
   mesh(new THREE.SphereGeometry(0.1, 18, 14), mats.skin, neck, 0, 0.125, 0.015).scale.set(0.95, 1.08, 1);
   for (const [x, z] of [[0, 0.02], [-0.045, -0.01], [0.045, -0.01], [0, -0.07]]) mesh(new THREE.BoxGeometry(0.018, 0.012, 0.05), mats.strap, neck, x, 0.262, z);   // helmet vents
   const helmetMesh = mesh(new THREE.SphereGeometry(0.127, 22, 14, 0, Math.PI * 2, 0, 1.95), mats.helmet, neck, 0, 0.14, -0.005); helmetMesh.scale.set(1, 1, 1.12);
   mesh(new THREE.CylinderGeometry(0.133, 0.133, 0.068, 26, 1, true, -1.05, 2.1), mats.goggle, neck, 0, 0.128, 0.006).scale.set(1, 1, 1.12);
-  mesh(new THREE.CylinderGeometry(0.134, 0.134, 0.034, 26, 1, true, 1.05, 4.18), mats.strap, neck, 0, 0.128, 0.006).scale.set(1, 1, 1.12);
+  mesh(new THREE.CylinderGeometry(0.134, 0.134, 0.034, 26, 1, true, 1.05, 4.18), mats.gstrap, neck, 0, 0.128, 0.006).scale.set(1, 1, 1.12);
   const arms = [1, -1].map(s => {
     const shoulder = new THREE.Group(); shoulder.position.set(0.2 * s, 0.47, 0); spine.add(shoulder);
     const elbow = new THREE.Group(); elbow.position.y = -0.29; shoulder.add(elbow);
@@ -2031,7 +2038,8 @@ function makeRig() {
     const pole = new THREE.Group(); hand.add(pole);
     mesh(cap(0.018, 0.11).translate(0, -0.01, 0), mats.grip, pole);
     mesh(new THREE.CylinderGeometry(0.0095, 0.006, 1.1, 8).translate(0, -0.6, 0), mats.pole, pole);
-    mesh(new THREE.CylinderGeometry(0.048, 0.048, 0.008, 14).translate(0, -1.08, 0), mats.grip, pole);
+    mesh(new THREE.TorusGeometry(0.05, 0.009, 6, 18).rotateX(Math.PI / 2).translate(0, -1.08, 0), mats.basket, pole);
+    mesh(new THREE.CylinderGeometry(0.044, 0.044, 0.004, 18).translate(0, -1.08, 0), mats.basket, pole);
     mesh(new THREE.ConeGeometry(0.008, 0.05, 6).rotateX(Math.PI).translate(0, -1.17, 0), mats.buckle, pole);
     return { shoulder, elbow, hand, pole };
   });
@@ -2108,6 +2116,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyC') camMode = (camMode + 1) % 3;
   if (e.code === 'KeyK') toggleSkis();
   if (e.code === 'KeyG') toggleSkins();
+  if (e.code === 'F3') { e.preventDefault(); settings.fps = !settings.fps; saveSettings(); }
   if (e.code === 'KeyB') lvsStart();
   if (e.code === 'KeyP') lvsProbe();
   if (e.code === 'KeyR') getUp();
@@ -2298,7 +2307,7 @@ function step(dt) {
     const s = S.v.length();
     if (tuck && s < 9) S.v.addScaledVector(tmpF, (EQ().board ? 0.8 : 2.4) * dt);   // skating; on a board you can only push with one foot
     const across = s > 0.1 ? Math.abs(vl) / s : 0;
-    const mu = hockey ? 0.06 + 0.58 * across : brake ? 0.06 + 0.26 * clamp(1.2 - s / 25, 0.35, 1) : 0.06 + (1 - groomed) * (0.04 + Math.min(0.1, ENV.fresh * 0.004)) * EQ().powder + ENV.condFric * (1 - (S.p.y > 1900 && ENV.condFric > 0.02 ? 0.7 : 0)), k = 0.0042 - S.tuck * 0.0018;
+    const mu = hockey ? 0.06 + 0.58 * across : brake ? 0.06 + 0.26 * clamp(1.2 - s / 25, 0.35, 1) : 0.06 + (1 - groomed) * (0.04 + Math.min(0.1, ENV.fresh * 0.004)) * EQ().powder + (S.sink || 0) * 0.9 + ENV.condFric * (1 - (S.p.y > 1900 && ENV.condFric > 0.02 ? 0.7 : 0)), k = 0.0042 - S.tuck * 0.0018;
     const decel = mu * G * n.y + k * s * s;
     if (s > 1e-4) S.v.multiplyScalar(Math.max(0, 1 - decel * dt / s));
     S.skid = Math.abs(vl0) * 0.9 + (hockey ? s * 0.9 : brake ? s * 0.18 : 0);
@@ -2348,7 +2357,7 @@ function collide() {
 function crash(why) {
   const flipV = S.flipV || 0; S.grind = null; trickReset();
   if (S.mode === 'crash') return;
-  const v = S.v.clone();
+  const v = S.v.clone(); rescueBegin(v, why);
   S.mode = 'crash'; S.grounded = true; S.yawRate = 0; S.hockey = false; S.edge = 0;
   flash(why, 1.6); burst(60); trackBreak();
   startRagdoll(v, why, flipV);
@@ -2360,7 +2369,7 @@ function walkStep(dt, turn, fwd, back) {
   S.yawRate += (turn * 2.2 - S.yawRate) * Math.min(1, dt * 8);
   S.yaw += S.yawRate * dt;
   const dir = tmpF.set(Math.sin(S.yaw), 0, Math.cos(S.yaw));
-  let target = (fwd ? (keys.ShiftLeft || keys.ShiftRight ? 3.2 : 1.4) : 0) - (back ? 0.8 : 0);
+  let target = ((fwd ? (keys.ShiftLeft || keys.ShiftRight ? 3.2 : 1.4) : 0) - (back ? 0.8 : 0)) * clamp(1 - (S.sink || 0) * 1.1, 0.2, 1);   // wading through powder is slow
   if (target) { // slope along the walking direction: climbing in boots in snow is slow
     const sgn = Math.sign(target), ahead = hAt(S.p.x + dir.x * sgn * 1.5, S.p.z + dir.z * sgn * 1.5) - hAt(S.p.x, S.p.z);
     const grade = ahead / 1.5;
@@ -2673,7 +2682,7 @@ function ragSub(dt) {
   const pel = P[J.pelvis]; S.p.set(pel.x, hAt(pel.x, pel.z), pel.z); S.v.copy(pel).sub(prev[J.pelvis]).multiplyScalar(1 / dt);
   if ((RAG.settled > 0.5 || RAG.t > 6) && !RAG.done) { RAG.done = true; showPromptR(); }   // at rest, or after a few seconds even if it is still sliding (R works any time after 0.8 s)
 }
-function showPromptR() { $('prompt').style.display = 'block'; $('prompt').innerHTML = 'Press <b>R</b> to get back up'; }
+function showPromptR() { $('prompt').style.display = 'block'; $('prompt').innerHTML = RESCUE.bad ? 'You are hurt: the ski patrol is on its way' : 'Press <b>R</b> to get back up'; }
 const _bx = new THREE.Vector3(), _by = new THREE.Vector3(), _bz = new THREE.Vector3();
 function placeBetween(obj, a, b, dirAxis /* 'y-' or 'z' */, sideRef) {
   // put an object whose geometry runs along local -y (limbs) or +z (skis) from point a towards b
@@ -2716,6 +2725,7 @@ function endRagdoll() {
 }
 function getUp() { // R: stand up where you fell, skis clicked back in
   if (S.mode !== 'crash' || !RAG.active || RAG.t < 0.8) return;
+  if (RESCUE.bad) { flash('You are hurt: wait for the ski patrol', 2); return; }          // a bad crash is not something you walk off
   const pel = RAG.P[J.pelvis], head = RAG.P[J.head];
   endRagdoll();
   // stand up across the slope (skis horizontal so you don't slide off), on the side your head ended up
@@ -3666,7 +3676,7 @@ function buildBody() {
   // trunk: hips, jacket hem flaring over the trousers, waist, chest, shoulders, high collar
   const T = [ // y (relative to the spine joint), rx, rz, forward shift, material
     [0.67, 0.076, 0.072, 0.005, TR], [0.61, 0.078, 0.074, 0.005, TR], [0.57, 0.09, 0.08, 0.005, TR], [0.53, 0.15, 0.10, 0, JK], [0.48, 0.19, 0.118, 0.005, JK],
-    [0.42, 0.195, 0.128, 0.015, JK], [0.34, 0.182, 0.13, 0.018, JK], [0.24, 0.165, 0.12, 0.012, JK], [0.14, 0.152, 0.112, 0.005, JK], [0.07, 0.16, 0.118, 0, JK],
+    [0.42, 0.195, 0.128, 0.015, JK], [0.34, 0.182, 0.13, 0.018, TR], [0.24, 0.165, 0.12, 0.012, JK], [0.14, 0.152, 0.112, 0.005, JK], [0.07, 0.16, 0.118, 0, JK],
     [0.02, 0.182, 0.13, -0.005, TR], [-0.01, 0.185, 0.133, -0.008, TR], [-0.025, 0.176, 0.127, -0.012, PA], [-0.06, 0.172, 0.125, -0.015, PA], [-0.11, 0.16, 0.118, -0.015, PA], [-0.15, 0.12, 0.095, -0.01, PA]];
   tube(T.map(([dy, rx, rz, fz, mat]) => {
     const y = spY + dy, wsp = sstep(spY - 0.01, spY + 0.15, y), wn = sstep(neckY - 0.03, neckY + 0.07, y) * 0.6;
@@ -3685,7 +3695,7 @@ function buildBody() {
   }
   // arms: sleeves from inside the shoulder to the cuff (the glove's gauntlet goes over it)
   const AR = [ // y (relative to the shoulder joint), rx, rz, material
-    [0.08, 0.066, 0.07, JK], [0.02, 0.072, 0.075, JK], [-0.04, 0.066, 0.068, JK], [-0.12, 0.061, 0.063, JK], [-0.21, 0.057, 0.059, JK], [-0.28, 0.054, 0.057, JK],
+    [0.08, 0.066, 0.07, JK], [0.02, 0.072, 0.075, JK], [-0.04, 0.066, 0.068, TR], [-0.12, 0.061, 0.063, JK], [-0.21, 0.057, 0.059, JK], [-0.28, 0.054, 0.057, JK],
     [-0.33, 0.052, 0.054, JK], [-0.42, 0.052, 0.054, JK], [-0.5, 0.047, 0.048, JK], [-0.535, 0.055, 0.057, TR], [-0.58, 0.055, 0.057, TR]];
   for (const i of [0, 1]) {
     const s = i === 0 ? 1 : -1;
@@ -3714,6 +3724,303 @@ function syncBody() { // bones follow the rig, or the ragdoll segments while you
   for (let i = 0; i < D.length; i++) { D[i].updateWorldMatrix(true, false); D[i].matrixWorld.decompose(BODY.bones[i].position, BODY.bones[i].quaternion, BODY.bones[i].scale); }
   BODY.mesh.visible = rag ? true : rig.root.visible;
 }
+
+// ================= quality presets + FPS counter =================
+const QUALITY = {
+  low: { graphics: 'standard', res: '0.75', shadows: 'off', view: 'short', trees: 'low' },
+  medium: { graphics: 'standard', res: 'auto', shadows: 'low', view: 'medium', trees: 'low' },
+  high: { graphics: 'standard', res: 'auto', shadows: 'high', view: 'medium', trees: 'high' },
+  ultra: { graphics: 'realistic', res: '1', shadows: 'high', view: 'long', trees: 'high' },
+};
+const FPS = { el: null, acc: 0, n: 0, fps: 60, ms: 16, slow: 0, tipped: false, age: 0 };
+function fpsTick(dt) {
+  FPS.acc += dt; FPS.n++; FPS.age += dt;
+  if (FPS.acc < 0.5) return;
+  FPS.fps = FPS.n / FPS.acc; FPS.ms = FPS.acc / FPS.n * 1000; FPS.acc = 0; FPS.n = 0;
+  if (settings.fps) {
+    if (!FPS.el) { FPS.el = document.createElement('div'); Object.assign(FPS.el.style, { position: 'fixed', left: '12px', bottom: '56px', padding: '4px 9px', borderRadius: '8px', background: 'rgba(8,12,18,.72)', color: '#9fe870', font: '600 12px ui-monospace,Consolas,monospace', zIndex: 15, pointerEvents: 'none' }); document.body.appendChild(FPS.el); }
+    FPS.el.style.display = 'block';
+    FPS.el.textContent = `${Math.round(FPS.fps)} fps · ${FPS.ms.toFixed(1)} ms · render ×${pixelRatio.toFixed(2)} · ${settings.quality}`;
+    FPS.el.style.color = FPS.fps >= 50 ? '#9fe870' : FPS.fps >= 30 ? '#ffd24a' : '#ff6b5a';
+  } else if (FPS.el) FPS.el.style.display = 'none';
+  // a slow start: suggest the low preset once
+  if (gameStarted && FPS.age > 12 && !FPS.tipped && settings.quality !== 'low') {
+    FPS.slow = FPS.fps < 28 ? FPS.slow + 1 : 0;
+    if (FPS.slow >= 6) { FPS.tipped = true; flash('Running slowly? Settings → Quality preset → Low (F3 shows the frame rate)', 6); }
+  }
+}
+
+// ================= race mode =================
+// The real race pistes (World Cup course "Silvano Beltrametti", the Pedra Grossa permanent course, slalom hills ...)
+// get a start portal, gates and a finish. Cross the start line to start the clock; every gate you miss costs 2 s;
+// your best run is saved and shown as a ghost.
+const RACES = { list: [], run: null, done: null, db: null, ghost: null, el: null, hudT: 0, scanT: 0 };
+const raceDB = () => RACES.db || (RACES.db = (() => { try { return JSON.parse(localStorage.getItem('arosa-davos-races') || '{}'); } catch (e) { return {}; } })());
+const raceSave = () => { try { localStorage.setItem('arosa-davos-races', JSON.stringify(raceDB())); } catch (e) { } };
+const fmtT = t => { const m = Math.floor(t / 60), s = t - m * 60; return (m ? m + ':' + (s < 10 ? '0' : '') : '') + s.toFixed(2); };
+function coursePoint(c, s) {
+  s = clamp(s, 0, c.len - 0.01); let i = 1; while (i < c.cum.length - 1 && c.cum[i] < s) i++;
+  const a = c.w[i - 1], b = c.w[i], sl = c.cum[i] - c.cum[i - 1] || 1, t = (s - c.cum[i - 1]) / sl;
+  return { x: a[0] + (b[0] - a[0]) * t, z: a[1] + (b[1] - a[1]) * t, tx: (b[0] - a[0]) / sl, tz: (b[1] - a[1]) / sl };
+}
+function projectCourse(c, x, z) { // arc length s along the course, signed offset u (left of travel is positive), distance to the centre line
+  let best = 1e9, bs = 0, bu = 0;
+  for (let i = 0; i < c.w.length - 1; i++) {
+    const a = c.w[i], b = c.w[i + 1], sx = b[0] - a[0], sz = b[1] - a[1], L2 = sx * sx + sz * sz || 1, t = clamp(((x - a[0]) * sx + (z - a[1]) * sz) / L2, 0, 1), qx = a[0] + sx * t, qz = a[1] + sz * t, d = Math.hypot(x - qx, z - qz);
+    if (d < best) { best = d; const L = Math.sqrt(L2); bs = c.cum[i] + t * L; bu = (x - qx) * (-sz / L) + (z - qz) * (sx / L); }
+  }
+  return { s: bs, u: bu, dist: best };
+}
+function buildRaces() {
+  const seen = new Set();
+  for (const p of pistes) {
+    if (p.a || p.w.length < 3) continue;
+    const nm = p.n || '';
+    if (!/Weltcup|Rennstrecke|Rennpiste|Slalomhang|^FIS\b|Alte FIS|Rennhang|Speed/i.test(nm) || /Traverse/i.test(nm)) continue;
+    const w = p.w.map(q => [q[0], q[1]]); if (hBase(w[0][0], w[0][1]) < hBase(w.at(-1)[0], w.at(-1)[1])) w.reverse();
+    const cum = [0]; for (let i = 1; i < w.length; i++) cum.push(cum[i - 1] + Math.hypot(w[i][0] - w[i - 1][0], w[i][1] - w[i - 1][1]));
+    const len = cum.at(-1); if (len < 300) continue;
+    const key = nm + '@' + Math.round(w[0][0] / 60) + ',' + Math.round(w[0][1] / 60); if (seen.has(key)) continue; seen.add(key);
+    const kind = /Slalom/i.test(nm) ? 'slalom' : /Speed/i.test(nm) ? 'speed' : 'giant';
+    const t0 = coursePoint({ w, cum, len }, 1);
+    const c = { id: String(p.id), name: nm + (p.r ? ' (' + p.r + ')' : ''), kind, w, cum, len, t0x: t0.tx, t0z: t0.tz, gates: [], prevS: null, y0: hBase(w[0][0], w[0][1]), y1: hBase(w.at(-1)[0], w.at(-1)[1]) };
+    const sp = kind === 'slalom' ? 13 : kind === 'speed' ? 70 : 28, hw = kind === 'slalom' ? 2.4 : kind === 'speed' ? 9 : 3.8, off = kind === 'slalom' ? 3.6 : kind === 'speed' ? 0 : 6;
+    for (let s = 24, k = 0; s < len - 14; s += sp, k++) {
+      const q = coursePoint(c, s), u = (k % 2 ? 1 : -1) * off, nx = -q.tz, nz = q.tx;
+      c.gates.push({ s, u, hw, cx: q.x + nx * u, cz: q.z + nz * u, nx, nz, tx: q.tx, tz: q.tz, red: k % 2 === 0 });
+    }
+    raceGeometry(c); RACES.list.push(c);
+  }
+  RACES.list.sort((a, b) => b.y0 - a.y0);
+  console.log('race courses: ' + RACES.list.map(c => c.name + ' ' + Math.round(c.len) + ' m/' + c.gates.length + ' gates').join(' | '));
+}
+function raceGeometry(c) {
+  for (const g of c.gates) {
+    const B = ch(g.cx, g.cz).solid, col = g.red ? '#d92b2b' : '#1f5fd6', P = [-1, 1].map(sd => { const x = g.cx + g.nx * g.hw * sd, z = g.cz + g.nz * g.hw * sd; return [x, hAt(x, z), z]; });
+    for (const [x, y, z] of P) B.rod(x, y - 0.15, z, x, y + 2.0, z, 0.028, col);
+    if (c.kind === 'giant') {                                                        // the panel between the poles
+      const top = 2.0, bot = 1.15, q = [[P[0][0], P[0][1] + bot, P[0][2]], [P[1][0], P[1][1] + bot, P[1][2]], [P[1][0], P[1][1] + top, P[1][2]], [P[0][0], P[0][1] + top, P[0][2]]];
+      B.quad(q[0], q[1], q[2], q[3], [g.tx, 0, g.tz], col); B.quad(q[0], q[1], q[2], q[3], [-g.tx, 0, -g.tz], col);
+    }
+  }
+  const portal = (s, kind) => {
+    const q = coursePoint(c, s), nx = -q.tz, nz = q.tx, B = ch(q.x, q.z).solid, yaw = Math.atan2(nx, nz), half = 9.5;
+    for (const sd of [-1, 1]) { const x = q.x + nx * half * sd, z = q.z + nz * half * sd, y = hAt(x, z); B.rod(x, y - 0.3, z, x, y + 3.9, z, 0.12, '#2b2f36'); }
+    const y = hAt(q.x, q.z) + 3.6;
+    if (kind === 'start') B.box(q.x, y, q.z, 0.18, 0.8, half * 2, '#1fa84a', yaw);
+    else for (let k = 0; k < 10; k++) { const u = (k - 4.5) * (half * 2 / 10); B.box(q.x + nx * u, y, q.z + nz * u, 0.18, 0.8, half * 2 / 10, k % 2 ? '#111111' : '#f2f2f2', yaw); }
+    B.box(q.x, hAt(q.x, q.z) + 0.02, q.z, 0.1, 0.04, half * 2, kind === 'start' ? '#1fa84a' : '#222', yaw);   // the line on the snow
+  };
+  portal(0, 'start'); portal(c.len - 1, 'finish');
+}
+function raceGhostMesh() {
+  if (RACES.ghost) return RACES.ghost;
+  const m = new THREE.Mesh(aiSkierGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true, color: '#7fe8ff', transparent: true, opacity: 0.5, depthWrite: false }));
+  m.frustumCulled = false; m.visible = false; scene.add(m); return (RACES.ghost = m);
+}
+function raceHud(html) {
+  if (!RACES.el) { RACES.el = document.createElement('div'); Object.assign(RACES.el.style, { position: 'fixed', top: '12px', left: '50%', transform: 'translateX(-50%)', padding: '8px 16px', borderRadius: '12px', background: 'rgba(8,12,18,.8)', color: '#fff', font: '600 14px system-ui', textAlign: 'center', zIndex: 18, pointerEvents: 'none', minWidth: '230px', display: 'none' }); document.body.appendChild(RACES.el); }
+  RACES.el.style.display = html ? 'block' : 'none'; if (html) RACES.el.innerHTML = html;
+}
+function raceStart(c) {
+  const best = raceDB()[c.id];
+  RACES.done = null;
+  RACES.run = { c, t: 0, gi: 0, missed: 0, rec: [], recT: 0, ghost: best && best.ghost ? best.ghost.map(a => ({ t: a[0], x: a[1], z: a[2], yaw: a[3], s: projectCourse(c, a[1], a[2]).s })) : null, gap: null };
+  flash('Go! ' + c.name, 1.4); raceGhostMesh().visible = !!RACES.run.ghost;
+}
+function raceEnd(msg) {
+  RACES.run = null; if (RACES.ghost) RACES.ghost.visible = false;
+  RACES.done = { t: 4 }; raceHud(`<span style="color:#ff8a6b">${msg}</span>`); flash(msg, 2);
+}
+function raceFinish(run) {
+  const c = run.c, total = run.t + 2 * run.missed, db = raceDB(), best = db[c.id], isBest = !best || total < best.time;
+  if (isBest) { db[c.id] = { time: total, ghost: run.rec, name: c.name }; raceSave(); }
+  RACES.run = null; if (RACES.ghost) RACES.ghost.visible = false;
+  RACES.done = { t: 12 };
+  raceHud(`<div style="font-size:11px;opacity:.7;letter-spacing:.08em">${c.name.toUpperCase()}</div><div style="font-size:30px;margin:2px 0">${fmtT(total)}</div>` +
+    `<div style="font-size:12px;opacity:.85">${fmtT(run.t)} on the clock${run.missed ? ` + ${run.missed} missed gate${run.missed > 1 ? 's' : ''} × 2 s` : ' · every gate clean'}</div>` +
+    (isBest ? `<div style="color:#ffd24a;margin-top:4px">${best ? 'New best! (' + fmtT(best.time) + ' before)' : 'First time down — saved as your best'}</div>` : `<div style="margin-top:4px;opacity:.85">Best: ${fmtT(best.time)} (+${(total - best.time).toFixed(2)})</div>`));
+  flash(isBest ? 'New best: ' + fmtT(total) : 'Finish: ' + fmtT(total), 3);
+}
+function raceGhostAt(g, t) { // interpolated ghost position at race time t
+  const a = g; if (!a.length) return null; if (t <= a[0].t) return a[0]; if (t >= a.at(-1).t) return a.at(-1);
+  let lo = 0, hi = a.length - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (a[m].t <= t) lo = m; else hi = m; }
+  const k = (t - a[lo].t) / ((a[hi].t - a[lo].t) || 1), dy = Math.atan2(Math.sin(a[hi].yaw - a[lo].yaw), Math.cos(a[hi].yaw - a[lo].yaw));
+  return { x: a[lo].x + (a[hi].x - a[lo].x) * k, z: a[lo].z + (a[hi].z - a[lo].z) * k, yaw: a[lo].yaw + dy * k, s: a[lo].s + (a[hi].s - a[lo].s) * k };
+}
+function raceTimeAt(g, s) { // when the ghost was at arc length s
+  let i = 0; while (i < g.length - 1 && g[i].s < s) i++;
+  if (i === 0) return g[0].t; const a = g[i - 1], b = g[i], k = clamp((s - a.s) / ((b.s - a.s) || 1), 0, 1); return a.t + (b.t - a.t) * k;
+}
+function updateRace(dt) {
+  if (!RACES.list.length || !gameStarted) return;
+  if (window.__game.paused) dt = 0;
+  const run = RACES.run;
+  if (run) {
+    if (S.mode === 'crash') return raceEnd('DNF — you crashed');
+    if (S.mode !== 'ski' || S.onFoot || S.skins) return raceEnd('Race cancelled');
+    run.t += dt;
+    const c = run.c, pr = projectCourse(c, S.p.x, S.p.z);
+    if (pr.dist > 45) return raceEnd('DNF — you left the course');
+    while (run.gi < c.gates.length && pr.s >= c.gates[run.gi].s) {
+      const g = c.gates[run.gi]; if (Math.abs(pr.u - g.u) > g.hw + 0.5) { run.missed++; flash(`Missed gate ${run.gi + 1} (+2 s)`, 1.2); } run.gi++;
+    }
+    run.recT -= dt; if (run.recT <= 0) { run.recT += 0.1; run.rec.push([Math.round(run.t * 100) / 100, Math.round(S.p.x * 10) / 10, Math.round(S.p.z * 10) / 10, Math.round(S.yaw * 100) / 100]); }
+    if (run.ghost) {
+      const gp = raceGhostAt(run.ghost, run.t), m = raceGhostMesh();
+      if (gp) { m.visible = true; m.position.set(gp.x, hAt(gp.x, gp.z), gp.z); m.rotation.set(0, gp.yaw, 0); }
+      run.gap = run.t - raceTimeAt(run.ghost, pr.s);
+    }
+    if (pr.s >= c.len - 2) return raceFinish(run);
+    RACES.hudT -= dt; if (RACES.hudT <= 0) {
+      RACES.hudT = 0.05; const missed = run.missed ? ` · <span style="color:#ff8a6b">${run.missed} missed (+${2 * run.missed} s)</span>` : '';
+      const gap = run.gap === null ? '' : `<div style="font-size:13px;color:${run.gap > 0 ? '#ff8a6b' : '#7dff9c'}">${run.gap > 0 ? '+' : '−'}${Math.abs(run.gap).toFixed(2)} vs your best</div>`;
+      raceHud(`<div style="font-size:11px;opacity:.7;letter-spacing:.08em">${c.name.toUpperCase()}</div><div style="font-size:30px;font-variant-numeric:tabular-nums">${fmtT(run.t)}</div>${gap}<div style="font-size:12px;opacity:.85">gate ${Math.min(run.gi + 1, c.gates.length)}/${c.gates.length}${missed}</div>`);
+    }
+    return;
+  }
+  if (RACES.done) { RACES.done.t -= dt; if (RACES.done.t <= 0) { RACES.done = null; raceHud(null); } }
+  if (S.mode !== 'ski' || S.onFoot || S.skins) { for (const c of RACES.list) c.prevS = null; return; }
+  for (const c of RACES.list) { // crossing the start line
+    const dx = S.p.x - c.w[0][0], dz = S.p.z - c.w[0][1];
+    if (Math.abs(dx) > 40 || Math.abs(dz) > 40) { c.prevS = null; continue; }
+    const sS = dx * c.t0x + dz * c.t0z, lat = -dx * c.t0z + dz * c.t0x;
+    if (c.prevS !== null && c.prevS < 0 && sS >= 0 && Math.abs(lat) < 13 && S.v.length() > 1) { raceStart(c); break; }
+    c.prevS = sS;
+  }
+}
+function raceGoto(c) { const x = c.w[0][0] - c.t0x * 14, z = c.w[0][1] - c.t0z * 14; placeAt(x, z, Math.atan2(c.t0x, c.t0z)); const b = raceDB()[c.id]; flash(c.name + ' — ski through the start portal to begin' + (b ? ' · best ' + fmtT(b.time) : ''), 3.5); }
+
+// ================= ski patrol and rescue =================
+// A bad crash (about 40 km/h or faster, an avalanche, a train) means you cannot just stand up: the ski patrol skis down to
+// you; after a really bad one a rescue helicopter comes. Either way you lose time and are taken down to a valley station.
+const RESCUE = { bad: false, severe: false, active: false, phase: '', t: 0, msg: '', patrol: null, sled: null, heli: null, fadeEl: null };
+function rescueFade(a, ms) {
+  if (!RESCUE.fadeEl) { RESCUE.fadeEl = document.createElement('div'); Object.assign(RESCUE.fadeEl.style, { position: 'fixed', inset: '0', background: '#000', opacity: '0', pointerEvents: 'none', zIndex: 40, transition: 'opacity .8s' }); document.body.appendChild(RESCUE.fadeEl); }
+  RESCUE.fadeEl.style.transition = 'opacity ' + ms + 'ms'; RESCUE.fadeEl.style.opacity = String(a);
+}
+function makeHeli() {
+  const g = new THREE.Group(), mk = (c, o = {}) => new THREE.MeshLambertMaterial({ color: c, ...o }), red = mk('#d8201f'), white = mk('#f1f1f1'), dark = mk('#1d2126');
+  const add = (geo, mat, x, y, z, sc = [1, 1, 1], rot = [0, 0, 0]) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.scale.set(...sc); m.rotation.set(...rot); m.castShadow = true; g.add(m); return m; };
+  add(new THREE.SphereGeometry(1, 18, 12), red, 0, 0, 0, [1.15, 1.1, 2.5]);
+  add(new THREE.SphereGeometry(1, 14, 10), mk('#2a3a4a', { transparent: true, opacity: 0.75 }), 0, 0.28, 1.75, [0.95, 0.8, 1.0]);
+  add(new THREE.CylinderGeometry(0.1, 0.24, 4.6, 10), red, 0, 0.35, -4.1, [1, 1, 1], [Math.PI / 2, 0, 0]);
+  add(new THREE.BoxGeometry(0.06, 1.3, 0.9), red, 0, 0.9, -6.2);
+  add(new THREE.BoxGeometry(0.9, 0.12, 6), white, 0, 0.05, 0.2, [1.3, 1, 0.5]);                       // white stripe
+  for (const sd of [-1, 1]) { add(new THREE.CylinderGeometry(0.05, 0.05, 4.2, 8), dark, sd * 0.95, -1.35, 0.1, [1, 1, 1], [Math.PI / 2, 0, 0]); for (const z of [-0.9, 0.9]) add(new THREE.CylinderGeometry(0.04, 0.04, 1.3, 6), dark, sd * 0.9, -0.8, z, [1, 1, 1], [0, 0, sd * 0.12]); }
+  const rotor = new THREE.Group(); rotor.position.y = 1.4; g.add(rotor);
+  for (let k = 0; k < 2; k++) { const b = new THREE.Mesh(new THREE.BoxGeometry(10.4, 0.05, 0.3), dark); b.rotation.y = k * Math.PI / 2; rotor.add(b); }
+  add(new THREE.CylinderGeometry(0.08, 0.08, 0.3, 8), dark, 0, 1.25, 0);
+  const tail = new THREE.Group(); tail.position.set(0.15, 0.95, -6.2); g.add(tail); for (let k = 0; k < 2; k++) { const b = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.05, 0.14), dark); b.rotation.z = k * Math.PI / 2; tail.add(b); }
+  g.userData = { rotor, tail }; return g;
+}
+function rescueAgents() {
+  if (RESCUE.patrol) return RESCUE.patrol;
+  const m = new THREE.InstancedMesh(AI.mesh.geometry, new THREE.MeshLambertMaterial({ vertexColors: true }), 3);
+  m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(9), 3); m.frustumCulled = false; m.castShadow = true; m.count = 0; scene.add(m);
+  const sb = new Builder(); sb.box(0, 0.14, 0, 0.8, 0.2, 2.3, '#ff6a1a'); sb.box(0, 0.27, -0.2, 0.7, 0.08, 1.2, '#f1f1f1'); for (const sd of [-1, 1]) sb.box(sd * 0.36, 0.04, 0, 0.07, 0.07, 2.5, '#2b2b2b'); sb.box(0, 0.5, 1.1, 0.5, 0.05, 0.05, '#2b2b2b');
+  const sled = new THREE.Mesh(sb.geometry(), new THREE.MeshLambertMaterial({ vertexColors: true })); sled.visible = false; sled.castShadow = true; sled.frustumCulled = false; scene.add(sled); RESCUE.sled = sled;
+  return (RESCUE.patrol = { mesh: m, a: [] });
+}
+function rescueBegin(v, why) { // called from crash()
+  const spd = v.length(), ex = /avalanche|Railway/i.test(why);
+  RESCUE.bad = spd >= 11 || ex; RESCUE.severe = spd >= 22 || ex; RESCUE.active = false; RESCUE.phase = ''; RESCUE.msg = '';
+}
+function rescueClear() {
+  RESCUE.active = false; RESCUE.phase = ''; if (RESCUE.patrol) RESCUE.patrol.mesh.count = 0; if (RESCUE.sled) RESCUE.sled.visible = false;
+  if (RESCUE.heli) { scene.remove(RESCUE.heli.g); RESCUE.heli = null; }
+}
+function rescueStart() {
+  const R = RESCUE, b = RAG.P[J.pelvis], fall = downhillYaw(b.x, b.z), ux = -Math.sin(fall), uz = -Math.cos(fall);   // uphill unit vector
+  R.active = true; R.t = 0; R.phase = 'coming';
+  if (R.severe) {
+    const g = makeHeli(), sx = b.x + ux * 650 + uz * 120, sz = b.z + uz * 650 - ux * 120; scene.add(g);
+    R.heli = { g, x: sx, z: sz, y: hAt(sx, sz) + 190, sp: 0, hover: 0 };
+    R.msg = 'You are badly hurt — a rescue helicopter has been called'; flash('Rescue helicopter on its way', 3);
+  } else {
+    const ag = rescueAgents(); ag.a = [0, 1].map(k => { const sx = b.x + ux * (150 + k * 12) - uz * (k ? 4 : -4), sz = b.z + uz * (150 + k * 12) + ux * (k ? 4 : -4); return { x: sx, z: sz, yaw: fall, ph: k * 2, side: k ? 1 : -1, arrived: false }; });
+    ag.mesh.count = 2; ag.mesh.setColorAt(0, C('#ff5a1f')); ag.mesh.setColorAt(1, C('#ff5a1f')); ag.mesh.instanceColor.needsUpdate = true;
+    R.msg = 'You are hurt — the ski patrol is on its way'; flash('Ski patrol called', 3);
+  }
+}
+function rescueHud() { $('prompt').style.display = RESCUE.phase === 'fade' ? 'none' : 'block'; $('prompt').innerHTML = RESCUE.msg || 'You are hurt — the ski patrol has been called'; }
+function nearestStation(severe) {
+  let best = null, bd = 1e12;
+  for (const l of lifts) {
+    if (l.len < 250 || l.spec.drag) continue;
+    const d = Math.hypot(l.bottom.x - S.p.x, l.bottom.z - S.p.z);
+    const score = severe ? (d < 6000 ? l.bottom.y : 1e9 + d) : d;                                  // the helicopter flies you to the lowest valley station
+    if (score < bd) { bd = score; best = l; }
+  }
+  return best;
+}
+function rescueFinish() {
+  const sev = RESCUE.severe, l = nearestStation(sev); rescueClear(); RESCUE.bad = false;
+  if (l) teleportBottom(l); else placeAt(S.p.x, S.p.z);
+  ENV.hour = (ENV.hour + (sev ? 2.2 : 0.4)) % 24; STATS.rescues = (STATS.rescues || 0) + 1;
+  flash(sev ? `Flown to the valley hospital, checked over — ${l ? l.name : 'valley station'}. You lost 2 hours.` : `The patrol took you down to ${l ? l.name : 'the valley station'} on the akja. You lost 25 minutes.`, 5);
+  rescueFade(0, 1400);
+}
+function updateRescue(dt) {
+  if (window.__game.paused) dt = 0;
+  const R = RESCUE;
+  if (S.mode !== 'crash' || !R.bad) { if (R.active || R.heli || (R.patrol && R.patrol.mesh.count)) rescueClear(); if (S.mode !== 'crash') R.bad = false; return; }
+  if (!R.active) { if (RAG.done || RAG.t > 5) rescueStart(); return; }
+  R.t += dt; const b = RAG.P[J.pelvis];
+  if (R.heli) {
+    const H = R.heli, gy = hAt(b.x, b.z);
+    if (R.phase === 'coming') {
+      const tx = b.x + 5, tz = b.z, ty = gy + 22, dx = tx - H.x, dz = tz - H.z, dy = ty - H.y, d = Math.hypot(dx, dz, dy);
+      H.sp = Math.min(58, 9 + d * 0.6, H.sp + 22 * dt); H.x += dx / d * H.sp * dt; H.y += dy / d * H.sp * dt; H.z += dz / d * H.sp * dt;
+      H.g.rotation.y = Math.atan2(dx, dz); H.g.rotation.x = 0.16 * H.sp / 58;
+      if (d < 4) { R.phase = 'hover'; R.t = 0; R.msg = 'The helicopter crew is attending to you…'; }
+    } else if (R.phase === 'hover') {
+      H.y += (gy + 9 - H.y) * Math.min(1, dt * 0.5); H.g.rotation.x *= 0.95; H.g.rotation.y += dt * 0.2;
+      if (R.t > 6) { R.phase = 'fade'; R.t = 0; rescueFade(1, 1200); }
+    } else if (R.phase === 'fade' && R.t > 1.5) rescueFinish();
+    H.g.position.set(H.x, H.y, H.z); H.g.userData.rotor.rotation.y += dt * 45; H.g.userData.tail.rotation.z += dt * 60;
+    if (H.y - gy < 45 && Math.random() < 0.9) puff(b.x + (Math.random() - 0.5) * 9, gy + 0.3, b.z + (Math.random() - 0.5) * 9, 3);          // the rotor wash blows the snow about
+    if (audio && (R.chopT = (R.chopT || 0) - dt) <= 0) { R.chopT = 0.085; knock(spatialOut(H.x, H.z, 160), audio.ctx.currentTime, 0.55, 190); }
+    return;
+  }
+  const ag = rescueAgents(), m = ag.mesh, e = new THREE.Euler();
+  let arrived = 0;
+  ag.a.forEach((a, i) => {
+    const tx = b.x + a.side * 1.7, tz = b.z - 0.3, dx = tx - a.x, dz = tz - a.z, d = Math.hypot(dx, dz);
+    if (d < 1.2) { a.arrived = true; a.yaw += Math.atan2(Math.sin(Math.atan2(b.x - a.x, b.z - a.z) - a.yaw), Math.cos(Math.atan2(b.x - a.x, b.z - a.z) - a.yaw)) * Math.min(1, dt * 4); }
+    else { const sp = Math.min(15, 2 + d * 0.5), sway = Math.sin(a.ph) * 3.2 * Math.min(1, d / 50); a.ph += dt * (sp / 9); const hd = Math.atan2(dx, dz); a.x += (dx / d * sp + Math.cos(hd) * 0 + -dz / d * sway * 0.7) * dt; a.z += (dz / d * sp + dx / d * sway * 0.7) * dt; a.yaw += Math.atan2(Math.sin(hd - a.yaw), Math.cos(hd - a.yaw)) * Math.min(1, dt * 5); }
+    if (a.arrived) arrived++;
+    const y = hAt(a.x, a.z); e.set(0, a.yaw, a.arrived ? 0 : Math.cos(a.ph) * 0.35, 'YXZ'); _cq.setFromEuler(e); _cs.set(1, 1, 1); _cm.compose(_cp.set(a.x, y, a.z), _cq, _cs); m.setMatrixAt(i, _cm);
+  });
+  m.instanceMatrix.needsUpdate = true;
+  if (R.phase === 'coming' && arrived === ag.a.length) {
+    R.phase = 'treat'; R.t = 0; R.msg = 'The ski patrol is attending to you…';
+    const fall = downhillYaw(b.x, b.z), sx = b.x + Math.cos(fall) * 2.2, sz = b.z - Math.sin(fall) * 2.2; RESCUE.sled.position.set(sx, hAt(sx, sz) + 0.02, sz); RESCUE.sled.rotation.set(0, fall, 0); RESCUE.sled.visible = true;
+  } else if (R.phase === 'treat' && R.t > 5) { R.phase = 'fade'; R.t = 0; rescueFade(1, 1200); }
+  else if (R.phase === 'fade' && R.t > 1.5) rescueFinish();
+}
+
+// ================= deep powder: it gives way under you and caves in around you =================
+// Off the pistes there is loose snow (a wind-packed layer plus whatever fell recently). Slow down, stop, or walk in it and you sink
+// in up to the thighs or the waist; it drags hard and sprays as it collapses. Speed and wide skis keep you floating on top.
+const POW = { told: false };
+function powderDepthAt(x, z) { // metres of loose snow that can swallow a skier here
+  const off = 1 - sstep(0.15, 0.5, pmSmooth(x, z)); if (off < 0.02) return 0;
+  return off * Math.min(0.75, 0.09 + (S.p.y > 1900 ? 0.03 : 0) + ENV.fresh * 0.011);   // every 10 cm of new snow adds about 11 cm
+}
+function updatePowder(dt) {
+  if (!gameStarted) return;
+  const sp = Math.hypot(S.v.x, S.v.z); let target = 0;
+  if (S.mode === 'ski' && S.grounded && !S.grind) {
+    const d = powderDepthAt(S.p.x, S.p.z), eq = EQ().board ? 0.75 : clamp(0.35 + 0.65 * EQ().powder, 0.3, 1.3);
+    target = S.onFoot ? d * 0.95 : d * (1 - 0.8 * sstep(3.5, 15, sp)) * eq;
+  }
+  const prev = S.sink || 0, rate = target > prev ? (sp < 3 ? 2.4 : 1.2) : 1.4;
+  S.sink = prev + (target - prev) * Math.min(1, dt * rate);
+  if (S.sink - prev > 0.003 && S.sink > 0.07 && sp < 7) puff(S.p.x + (Math.random() - 0.5) * 1.3, S.p.y + 0.1, S.p.z + (Math.random() - 0.5) * 1.3, 2 + Math.round(S.sink * 14));   // the snow collapses around you
+  if (S.sink > 0.3 && !POW.told) { POW.told = true; flash('Deep powder: you sink in. Keep your speed up, and wide powder skis float best', 4.5); }
+}
+
 
 // ================= animation =================
 // Poses are driven by the physics (sideways acceleration -> inclination, load -> knee flex, vertical
@@ -3849,7 +4156,7 @@ function animate(dt) {
       R.position.set(cx + (px - cx) * door, cy + (py - cy) * door, cz + (pz - cz) * door);
     }
   } else { // follow the physics body; height is eased so small terrain steps don't jolt the skier
-    const ty = S.p.y + (S.onFoot ? 0.04 : 0.1);
+    const ty = S.p.y + (S.onFoot ? 0.04 : 0.1) - (S.sink || 0) * 0.95;                  // sunk into the powder
     const jump = Math.abs(R.position.x - S.p.x) + Math.abs(R.position.z - S.p.z) > 5;
     R.position.set(S.p.x, jump || !S.grounded ? ty : R.position.y + (ty - R.position.y) * Math.min(1, dt * 25), S.p.z);
     n = S.grounded ? (S.onFoot ? _up : normalAt(S.p.x, S.p.z)) : _up;
@@ -3913,7 +4220,7 @@ function emit(n, spread = 1) {
 }
 function burst(n) { for (let i = 0; i < 3; i++) emit(Math.floor(n / 3), 1.6); }
 function updateSpray(dt) {
-  if (S.mode === 'ski' && S.grounded) { const rate = clamp(S.skid - 1.2, 0, 20) * 22; let n = rate * dt; n = Math.floor(n) + (Math.random() < n % 1 ? 1 : 0); if (n) emit(n); }
+  if (S.mode === 'ski' && S.grounded) { const rate = clamp(S.skid - 1.2, 0, 20) * 22 + (S.sink || 0) * Math.hypot(S.v.x, S.v.z) * 70; let n = rate * dt; n = Math.floor(n) + (Math.random() < n % 1 ? 1 : 0); if (n) emit(n); }
   for (let k = 0; k < SPN; k++) {
     if (spLife[k] <= 0) { spPos[k * 3 + 1] = -1e5; continue; }
     spLife[k] -= dt; const b = k * 3;
@@ -3935,9 +4242,9 @@ let trHead = 0, trLast = null;
 function trackBreak() { trLast = null; ptLast = null; }
 function updateTracks() {
   if (S.mode !== 'ski' || !S.grounded || S.onFoot) { trLast = null; ptLast = null; return; }
-  const depth = (1 - sstep(0.2, 0.5, pmAt(S.p.x, S.p.z))) * Math.min(1, (ENV.fresh + 4) / 30);   // how deep the skis sink
+  const depth = Math.max((1 - sstep(0.2, 0.5, pmAt(S.p.x, S.p.z))) * Math.min(1, (ENV.fresh + 4) / 30), clamp((S.sink || 0) / 0.2, 0, 1.2));   // how deep the skis sink
   if (depth > 0.15) {
-    const yw = Math.atan2(S.v.x, S.v.z), lx = Math.cos(yw), lz = -Math.sin(yw), w = 0.22 + depth * 0.3;
+    const yw = Math.atan2(S.v.x, S.v.z), lx = Math.cos(yw), lz = -Math.sin(yw), w = 0.22 + depth * 0.3 + (S.sink || 0) * 0.9;
     const y = hAt(S.p.x, S.p.z) + 0.05, cur = { x: S.p.x, y, z: S.p.z, lx, lz, w };
     if (ptLast && Math.hypot(S.p.x - ptLast.x, S.p.z - ptLast.z) >= 0.7) {
       const a = ptLast, k = ptHead * 18;
@@ -4381,7 +4688,7 @@ function saveTick(dt) {
 addEventListener('beforeunload', writeSave);
 
 // ---------- settings (saved in this browser) ----------
-const SETTINGS_DEFAULT = { equip: 'allmtn', jacket: '#c8102e', jacket2: '#1c2230', pants: '#252c38', helmet: '#f2f2f2', head: 'helmet', lens: 'orange', graphics: 'standard', timeSpeed: 'x20', weather: 'auto', res: 'auto', shadows: 'high', view: 'medium', trees: 'high', fov: 62, shake: true, speedfx: true, snow: true, volume: 0.6, units: 'kmh', hud: true, minimap: true, labels: true, sens: 1 };
+const SETTINGS_DEFAULT = { quality: 'high', fps: false, equip: 'allmtn', jacket: '#1f7a78', jacket2: '#12203a', pants: '#1a2030', helmet: '#16171a', head: 'helmet', lens: 'orange', graphics: 'standard', timeSpeed: 'x20', weather: 'auto', res: 'auto', shadows: 'high', view: 'medium', trees: 'high', fov: 62, shake: true, speedfx: true, snow: true, volume: 0.6, units: 'kmh', hud: true, minimap: true, labels: true, sens: 1 };
 const settings = { ...SETTINGS_DEFAULT };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('arosa-davos-settings') || '{}')); } catch (e) { }
 function saveSettings() { try { localStorage.setItem('arosa-davos-settings', JSON.stringify(settings)); } catch (e) { } }
@@ -4491,6 +4798,7 @@ function buildSettingsMenu() {
     ${sel('head', 'Headwear', [['helmet', 'Helmet'], ['beanie', 'Beanie (bobble hat)']])}
     ${sel('lens', 'Goggle lens', [['orange', 'Orange'], ['blue', 'Blue mirror'], ['silver', 'Silver mirror'], ['gold', 'Gold mirror'], ['green', 'Green mirror']])}
     <h4>Graphics</h4>
+    ${sel('quality', 'Quality preset', [['custom', 'Custom'], ['low', 'Low (weak PCs)'], ['medium', 'Medium'], ['high', 'High'], ['ultra', 'Ultra (realistic)']])}
     ${sel('graphics', 'Graphics', [['standard', 'Standard (fast)'], ['realistic', 'Realistic (sky, bloom, sharper shadows)']])}
     ${sel('res', 'Resolution', [['auto', 'Auto (keeps 60 fps)'], ['0.5', '50 %'], ['0.75', '75 %'], ['1', '100 %'], ['1.25', '125 %'], ['1.5', '150 %']])}
     ${sel('shadows', 'Shadows', [['off', 'Off'], ['low', 'Low'], ['high', 'High']])}
@@ -4502,7 +4810,7 @@ function buildSettingsMenu() {
     ${sel('timeSpeed', 'Clock speed', [['real', 'Real time'], ['x20', '20× (1 h = 3 min)'], ['x60', '60× (1 h = 1 min)'], ['frozen', 'Stopped']])}
     ${sel('weather', 'Weather', [['auto', 'Changes by itself'], ['clear', 'Sunny'], ['cloudy', 'Overcast (flat light)'], ['snowing', 'Snowfall'], ['fog', 'Sea of fog in the valleys']])}
     <h4>Effects</h4>
-    ${chk('speedfx', 'Speed effects (field of view, vignette)')}${chk('shake', 'Camera vibration')}${chk('snow', 'Falling snow')}
+    ${chk('speedfx', 'Speed effects (field of view, vignette)')}${chk('shake', 'Camera vibration')}${chk('snow', 'Falling snow')}${chk('fps', 'Show frame rate (F3)')}
     <h4>Sound &amp; controls</h4>
     ${rng('volume', 'Volume', 0, 1, 0.05)}${rng('sens', 'Mouse sensitivity', 0.3, 2.5, 0.1)}
     ${sel('units', 'Speed units', [['kmh', 'km/h'], ['mph', 'mph']])}
@@ -4513,6 +4821,8 @@ function buildSettingsMenu() {
   f.querySelectorAll('[data-k]').forEach(el => el.addEventListener('input', () => {
     const k = el.dataset.k; settings[k] = el.type === 'checkbox' ? el.checked : el.type === 'range' ? parseFloat(el.value) : el.value;
     if (el.type === 'range') $('v_' + k).textContent = settings[k];
+    if (k === 'quality' && QUALITY[settings.quality]) { Object.assign(settings, QUALITY[settings.quality]); applySettings(); buildSettingsMenu(); return; }
+    if (['graphics', 'res', 'shadows', 'view', 'trees'].includes(k) && settings.quality !== 'custom') { settings.quality = 'custom'; const q = f.querySelector('[data-k="quality"]'); if (q) q.value = 'custom'; }
     applySettings();
   }));
   $('setReset').onclick = () => { Object.assign(settings, SETTINGS_DEFAULT); buildSettingsMenu(); applySettings(); };
@@ -4619,6 +4929,12 @@ function buildTeleportMenu() {
     b.onclick = () => { const [x, z] = r.terrace || [r.cx + 25, r.cz]; placeAt(x, z); flash(r.name, 2); $('tele').style.display = 'none'; };
     $('tR').appendChild(b);
   }
+  const cols = document.querySelector('#tele .cols');
+  if (cols && RACES.list.length) {
+    const col = document.createElement('div'); col.innerHTML = '<h3>Race courses (ski through the start)</h3>';
+    for (const c of RACES.list) { const b = document.createElement('button'), best = raceDB()[c.id]; b.innerHTML = '<span>' + esc(c.name) + '</span><span>' + Math.round(c.y0) + ' m' + (best ? ' · best ' + fmtT(best.time) : '') + '</span>'; b.onclick = () => { raceGoto(c); $('tele').style.display = 'none'; }; col.appendChild(b); }
+    cols.appendChild(col); cols.style.gridTemplateColumns = 'repeat(auto-fit, minmax(220px, 1fr))';
+  }
 }
 let hudT = 0;
 function updateHud(dt) {
@@ -4639,7 +4955,7 @@ function updateHud(dt) {
   else if (S.onFoot) $('piste').innerHTML = `<b>On foot</b> · skis on your shoulder <span style="opacity:.6">(K)</span>`;
   else { const p = pisteNear(S.p.x, S.p.z); $('piste').innerHTML = p ? `<span class="pill" style="background:${diffOf(p.d).col}">${p.r ? p.r : diffOf(p.d).name}</span> ${(p.n || diffOf(p.d).name + ' piste').replace(/</g, '')}` : 'Off piste'; }
   nearLift = S.mode === 'ski' ? findNearLift() : null;
-  if (S.mode === 'crash') { $('piste').innerHTML = '<b>Crashed</b> · skis off'; if (RAG.done) showPromptR(); else $('prompt').style.display = 'none'; }
+  if (S.mode === 'crash') { $('piste').innerHTML = RESCUE.bad ? '<b>Injured</b> · waiting for rescue' : '<b>Crashed</b> · skis off'; if (RESCUE.bad) { if (RAG.done || RESCUE.active) rescueHud(); else $('prompt').style.display = 'none'; } else if (RAG.done) showPromptR(); else $('prompt').style.display = 'none'; }
   else if (S.mode === 'board') {
     const w = boardWait(S.lift), kind = S.lift.spec.carrier === 'chair' ? 'chair' : S.lift.spec.carrier === 'tbar' ? 'T-bar' : S.lift.spec.carrier === 'gondola' ? 'cabin' : 'departure';
     $('prompt').style.display = 'block'; $('prompt').innerHTML = `Waiting at <b>${S.lift.name}</b> — next ${kind} in <b>${w === Infinity ? '…' : w > 60 ? Math.floor(w / 60) + ':' + String(Math.floor(w % 60)).padStart(2, '0') : Math.ceil(w) + ' s'}</b> <span style="opacity:.6">(hold F to skip)</span>`;
@@ -4688,24 +5004,26 @@ addEventListener('resize', resize);
   await stage('Erecting pylons, stations and ropes…', 80);
   buildLiftStatics(); buildCarriers(); buildLandmarks(); buildParkMeshes();
   await stage('Planting piste markers and forests…', 88);
-  buildClearMask(); buildPisteDetails(); finalizeChunks();
+  buildClearMask(); buildPisteDetails(); buildRaces(); finalizeChunks();
   buildFar(); buildNearGeometry(); buildTreeMesh(); buildAI(); buildCats(); buildAvalanche(); rollDanger(); buildGearVisuals();
   await stage('Drawing the map…', 95);
   buildMapCanvas(); buildTeleportMenu(); buildStartMenu(); buildSettingsMenu(); resize(); applySettings();
   const start = lifts.find(l => /Weisshornbahn 2/.test(l.name)) || lifts.sort((a, b) => b.top.y - a.top.y)[0];
   teleportTop(start); $('msg').style.display = 'none'; msgT = 0;
   camPos.copy(S.p).add(new THREE.Vector3(0, 30, -30));
+  Object.assign(window.__game, { RACES, RESCUE, QUALITY, FPS, raceGoto, rescueBegin, coursePoint, projectCourse, POW, powderDepthAt, ENV, EQ, settings: () => settings });
   $('loading').style.display = 'none';
   showMenu('mMain'); $('mMain').querySelector('[data-go="mStart"]').classList.add('primary');
   let last = performance.now(), clock = 0, physAcc = 0;
   const frame = dt => {
     clock += dt; const now = clock * 1000;
     // fixed-step physics (240 Hz), independent of the frame rate
+    updatePowder(dt);
     if (!window.__game.paused) { physAcc += dt; let k = 0; const h = 1 / PHYS.hz; while (physAcc >= h && k++ < 30) { step(h); physAcc -= h; } if (k >= 30) physAcc = 0; }
     updateNear(S.p.x, S.p.z);
     animate(dt); syncBody(); updateSpray(dt); updateTracks(); updateTreeShadows(dt); updateFlakes(dt); updateAudio(); updateSounds(dt); updateGearFrame(dt);
     updateEnv(dt); saveTick(dt); if (liftsRunning()) liftClock += dt;
-    updateAI(dt); updateCats(dt); updateAvalanche(dt); updateLandmarks(dt);
+    updateAI(dt); updateCats(dt); updateAvalanche(dt); updateLandmarks(dt); updateRace(dt); updateRescue(dt); fpsTick(dt);
     updateCarriers(liftClock, dt);
     updateCamera(dt); updateHud(dt);
     sun.position.copy(S.p).addScaledVector(SUNDIR, 300); sun.target.position.copy(S.p);

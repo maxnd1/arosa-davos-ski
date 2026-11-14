@@ -64,9 +64,9 @@ function runCase(slopeDeg, kmh, seed, trace) {
     arms: [1, -1].map(s => ({ shoulder: node(0.2 * s, 1.4, 0.08), elbow: node(0.26 * s, 1.14, 0.18), hand: node(0.3 * s, 0.95, 0.38), pole: node(0.3 * s, 0.95, 0.38) })),
     legs: [1, -1].map(s => ({ hip: node(0.095 * s, 0.89, -0.05), knee: node(0.1 * s, 0.5, 0.12), ankle: node(0.1 * s, 0.1, 0), skiG: node(0.1 * s, -0.065, 0) })),
   };
-  const make = new Function('clamp', 'sstep', 'pmAt', 'ENV', 'EQ', 'THREE', 'hAt', 'normalAt', 'G', 'PHYS', '_up', 'S', 'rig', '$', 'scene', 'spPos', 'spVel', 'spLife', 'SPN',
+  const make = new Function('clamp', 'sstep', 'pmAt', 'ENV', 'EQ', 'THREE', 'hAt', 'normalAt', 'G', 'PHYS', '_up', 'S', 'rig', '$', 'scene', 'spPos', 'spVel', 'spLife', 'SPN', 'RESCUE',
     'let spHead = 0; ' + code + '\n RAG.vis = { grp: { visible: false } };\n return { RAG, J, startRagdoll, ragStep, ragSub: typeof ragSub === "function" ? ragSub : null, clampFn: clamp, TUNE: typeof RAG_TUNE !== "undefined" ? RAG_TUNE : null, ragSurface: typeof ragSurface === "function" ? ragSurface : null };');
-  const R = make(clamp, sstep, pmAt, ENV, EQ, THREE, hAt, normalAt, G, PHYS, _up, S, rig, $, scene, spPos, spVel, spLife, SPN);
+  const R = make(clamp, sstep, pmAt, ENV, EQ, THREE, hAt, normalAt, G, PHYS, _up, S, rig, $, scene, spPos, spVel, spLife, SPN, { bad: false });
   if (R.TUNE && process.env.TUNE) Object.assign(R.TUNE, JSON.parse(process.env.TUNE));   // e.g. TUNE={"loadG":1}
   const v = kmh / 3.6;
   R.startRagdoll(new Vector3(0, -Math.sin(SL) * v, Math.cos(SL) * v), REASON, 0);
