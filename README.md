@@ -25,6 +25,14 @@ node swiss-ski/server.js
 
 Then open <http://127.0.0.1:8642> in Chrome or Edge (first load takes ~30 s). Opening `index.html` directly does not work: the browser blocks reading the terrain tiles from `file://`.
 
+## Tests
+
+```bash
+node tests/ragdoll.mjs 5 piste        # headless test of the crash ragdoll (also: powder, ice; a crash reason as 4th argument)
+```
+
+It cuts the real ragdoll code out of `swiss-ski/index.html` and drops the body on planar slopes of 15°, 25°, 35° and 40° at 20, 50 and 90 km/h, with seeded randomness. It reports distance, bounces, tumbles, bone stretch, settling time and any explosion.
+
 ## Controls
 
 | Key | Action |

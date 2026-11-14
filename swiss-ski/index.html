@@ -85,6 +85,7 @@
   <div class="row"><span>Time</span><span id="clock">—</span></div>
   <div class="row"><span>Snow</span><span id="snowc">—</span></div>
   <div class="row"><span>Avalanche risk</span><span id="aval">—</span></div>
+  <div class="row"><span>Gear</span><span id="gearv">—</span></div>
   <div class="row" style="margin-top:6px"><span id="piste">Off piste</span></div>
 </div>
 <div id="mini" class="panel"><canvas width="440" height="440"></canvas></div>
@@ -187,9 +188,17 @@ function hBase(x, z) {
   const dE = E - (ek + ALT.ek0) * 1000, dN = N - (nk + ALT.nk0) * 1000;
   let col = dE * 0.5 - 0.5, row = (1000 - dN) * 0.5 - 0.5;
   col = col < 0 ? 0 : col > 498.999 ? 498.999 : col; row = row < 0 ? 0 : row > 498.999 ? 498.999 : row;
-  const c0 = col | 0, r0 = row | 0, fx = col - c0, fy = row - r0, i = r0 * 500 + c0;
-  const a = t[i], b = t[i + 1], c = t[i + 500], d = t[i + 501];
-  const hi = (a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy) * 0.1;
+  // cubic B-spline over 4x4 samples: smooth (C2) heights, so the 2 m grid doesn't leave a kink every 2 m
+  const c0 = col | 0, r0 = row | 0, fx = col - c0, fy = row - r0;
+  const bx0 = (1 - fx) ** 3 / 6, bx1 = (3 * fx ** 3 - 6 * fx * fx + 4) / 6, bx2 = (-3 * fx ** 3 + 3 * fx * fx + 3 * fx + 1) / 6, bx3 = fx ** 3 / 6;
+  const by0 = (1 - fy) ** 3 / 6, by1 = (3 * fy ** 3 - 6 * fy * fy + 4) / 6, by2 = (-3 * fy ** 3 + 3 * fy * fy + 3 * fy + 1) / 6, by3 = fy ** 3 / 6;
+  const ca = c0 > 0 ? c0 - 1 : 0, cd = c0 < 498 ? c0 + 2 : 499, cb = c0, cc = c0 + 1;
+  let hsum = 0;
+  for (let k = 0; k < 4; k++) {
+    const rr = clamp(r0 - 1 + k, 0, 499) * 500, wy = k === 0 ? by0 : k === 1 ? by1 : k === 2 ? by2 : by3;
+    hsum += wy * (bx0 * t[rr + ca] + bx1 * t[rr + cb] + bx2 * t[rr + cc] + bx3 * t[rr + cd]);
+  }
+  const hi = hsum * 0.1;
   const m = ALT.miss[ti]; let w = 1;
   if (m) { const B = 140; if (m & 1) w = Math.min(w, dE / B); if (m & 2) w = Math.min(w, (1000 - dE) / B); if (m & 4) w = Math.min(w, dN / B); if (m & 8) w = Math.min(w, (1000 - dN) / B); }
   if (w >= 1) { _hiW = 1; return hi; } if (w <= 0) return eu;
@@ -306,15 +315,22 @@ function vnoise(x, z, s = 7) {
   return a + (b - a) * sx + (c - a) * sz + (a - b - c + d) * sx * sz;
 }
 // snow micro-relief: wind drifts & bumps off piste, smooth groomed surface on piste
+function pmSmooth(x, z) { // piste mask with cubic B-spline sampling: no creases where it feeds into the terrain height
+  if (!PM) return 0;
+  const px = clamp(x / MPP + W / 2, 1, W - 3), py = clamp(z / MPP + H / 2, 1, H - 3), x0 = px | 0, y0 = py | 0, fx = px - x0, fy = py - y0;
+  const bw = t => [(1 - t) ** 3 / 6, (3 * t ** 3 - 6 * t * t + 4) / 6, (-3 * t ** 3 + 3 * t * t + 3 * t + 1) / 6, t ** 3 / 6], wx = bw(fx), wy = bw(fy);
+  let v = 0; for (let j = 0; j < 4; j++) { const row = (y0 - 1 + j) * W + x0 - 1; v += wy[j] * (wx[0] * PM[row] + wx[1] * PM[row + 1] + wx[2] * PM[row + 2] + wx[3] * PM[row + 3]); }
+  return v / 255;
+}
 function detail(x, z) {
-  const off = 1 - pmAt(x, z);
+  const off = 1 - sstep(0.1, 0.45, pmSmooth(x, z));             // wind-blown relief only clearly away from the pistes
   if (off < 0.01) return 0;
   return off * ((vnoise(x / 17, z / 17, 3) - 0.5) * 0.9 + (vnoise(x / 7.5, z / 7.5, 4) - 0.5) * 0.35);
 }
 function hGroomed(x, z) { // on the pistes the groomers level out what's left: average over ±3.5 m
   const b = hBase(x, z), w = _hiW;
   if (w <= 0 || !PM) return b;
-  const pm = pmAt(x, z); if (pm < 0.08) { _hiW = w; return b; }
+  const pm = pmSmooth(x, z); if (pm < 0.08) { _hiW = w; return b; }
   const r = 3.5, avg = (hBase(x + r, z) + hBase(x - r, z) + hBase(x, z + r) + hBase(x, z - r)) * 0.25;
   _hiW = w; return b + (avg - b) * 0.7 * sstep(0.08, 0.6, pm);
 }
@@ -1970,14 +1986,10 @@ function makeRig() {
   const root = new THREE.Group(), yawG = new THREE.Group(), roll = new THREE.Group(), tumble = new THREE.Group(), body = new THREE.Group();
   root.add(yawG); yawG.add(roll); roll.add(tumble); tumble.position.y = 0.8; tumble.add(body); body.position.y = -0.8;
   const pelvis = new THREE.Group(); body.add(pelvis);
-  mesh(new THREE.SphereGeometry(0.16, 16, 12), mats.pants, pelvis).scale.set(1.04, 0.74, 0.82);
   const skiGeo = skiGeometry();
   const legs = [1, -1].map(s => {
     const hip = new THREE.Group(); hip.position.set(0.095 * s, -0.03, 0); pelvis.add(hip);
-    mesh(cap(0.079, 0.3).translate(0, -0.22, 0), mats.pants, hip);
     const knee = new THREE.Group(); knee.position.y = -0.46; hip.add(knee);
-    mesh(new THREE.SphereGeometry(0.07, 12, 8), mats.pants, knee);
-    mesh(cap(0.064, 0.28).translate(0, -0.19, 0), mats.pants, knee);
     const ankle = new THREE.Group(); ankle.position.y = -0.46; knee.add(ankle);
     // ski boot: cuff + shell + sole + buckles
     mesh(cap(0.074, 0.12).translate(0, 0.06, -0.005), mats.boot, ankle).scale.set(1, 1, 1.22);
@@ -1997,27 +2009,23 @@ function makeRig() {
   });
   const spine = new THREE.Group(); spine.position.y = 0.06; pelvis.add(spine);
   const prof = [[0.135, 0], [0.15, 0.06], [0.165, 0.18], [0.183, 0.31], [0.19, 0.41], [0.165, 0.5], [0.1, 0.56], [0.06, 0.58]].map(([r, y]) => new THREE.Vector2(r, y));
-  mesh(new THREE.LatheGeometry(prof, 18), mats.jacket, spine).scale.set(1, 1, 0.72);
-  mesh(new THREE.CylinderGeometry(0.142, 0.142, 0.055, 18, 1, true).translate(0, 0.025, 0), mats.jacket2, spine).scale.set(1, 1, 0.74);
-  mesh(new THREE.BoxGeometry(0.012, 0.44, 0.012), mats.jacket2, spine, 0, 0.27, 0.135);
-  mesh(new THREE.BoxGeometry(0.13, 0.1, 0.02).translate(0, 0, 0), mats.jacket2, spine, 0.07, 0.36, 0.128);
-  for (const s of [-1, 1]) mesh(new THREE.BoxGeometry(0.03, 0.42, 0.18), mats.jacket2, spine, 0.175 * s, 0.26, 0);
-  mesh(new THREE.CylinderGeometry(0.074, 0.088, 0.09, 16), mats.jacket2, spine, 0, 0.585, 0).scale.set(1, 1, 0.9);
-  mesh(cap(0.1, 0.16), mats.jacket2, spine, 0, 0.3, -0.155).scale.set(1.15, 1, 0.45); // small backpack
+  // zip, chest pocket and a slim backpack sit on the suit; the suit itself is the skinned mesh (buildBody)
+  mesh(new THREE.BoxGeometry(0.01, 0.42, 0.01), mats.jacket2, spine, 0, 0.3, 0.14);
+  mesh(new THREE.BoxGeometry(0.1, 0.075, 0.012), mats.jacket2, spine, 0.075, 0.37, 0.142);
+  mesh(cap(0.095, 0.2), mats.jacket2, spine, 0, 0.3, -0.16).scale.set(1.25, 1, 0.42);
+  for (const s of [-1, 1]) mesh(new THREE.BoxGeometry(0.035, 0.36, 0.02), mats.strap, spine, 0.1 * s, 0.33, 0.128).rotation.x = -0.12;
   const neck = new THREE.Group(); neck.position.y = 0.6; spine.add(neck);
-  mesh(new THREE.CylinderGeometry(0.062, 0.068, 0.085, 14), mats.strap, neck, 0, 0.03, 0);
+  mesh(new THREE.CylinderGeometry(0.072, 0.07, 0.13, 18).translate(0, 0.05, 0.004), mats.jacket2, neck).scale.set(1, 1, 1.12);   // neck gaiter pulled up over the chin
   mesh(new THREE.SphereGeometry(0.1, 18, 14), mats.skin, neck, 0, 0.125, 0.015).scale.set(0.95, 1.08, 1);
+  for (const [x, z] of [[0, 0.02], [-0.045, -0.01], [0.045, -0.01], [0, -0.07]]) mesh(new THREE.BoxGeometry(0.018, 0.012, 0.05), mats.strap, neck, x, 0.262, z);   // helmet vents
   const helmetMesh = mesh(new THREE.SphereGeometry(0.127, 22, 14, 0, Math.PI * 2, 0, 1.95), mats.helmet, neck, 0, 0.14, -0.005); helmetMesh.scale.set(1, 1, 1.12);
   mesh(new THREE.CylinderGeometry(0.133, 0.133, 0.068, 26, 1, true, -1.05, 2.1), mats.goggle, neck, 0, 0.128, 0.006).scale.set(1, 1, 1.12);
   mesh(new THREE.CylinderGeometry(0.134, 0.134, 0.034, 26, 1, true, 1.05, 4.18), mats.strap, neck, 0, 0.128, 0.006).scale.set(1, 1, 1.12);
   const arms = [1, -1].map(s => {
     const shoulder = new THREE.Group(); shoulder.position.set(0.2 * s, 0.47, 0); spine.add(shoulder);
-    mesh(new THREE.SphereGeometry(0.072, 12, 8), mats.jacket, shoulder);
-    mesh(cap(0.059, 0.19).translate(0, -0.145, 0), mats.jacket, shoulder);
     const elbow = new THREE.Group(); elbow.position.y = -0.29; shoulder.add(elbow);
-    mesh(cap(0.053, 0.18).translate(0, -0.13, 0), mats.jacket, elbow);
-    mesh(new THREE.CylinderGeometry(0.056, 0.056, 0.04, 12, 1, true).translate(0, -0.245, 0), mats.jacket2, elbow);
     const hand = new THREE.Group(); hand.position.y = -0.28; elbow.add(hand);
+    mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.1, 14).translate(0, 0.05, 0), mats.glove, hand);           // glove gauntlet over the cuff
     mesh(cap(0.046, 0.05), mats.glove, hand).scale.set(1, 1, 1.15);
     mesh(cap(0.018, 0.03).translate(0, 0, 0), mats.glove, hand, -0.035 * s, 0.01, 0.035).rotation.z = 0.6 * s;
     const pole = new THREE.Group(); hand.add(pole);
@@ -2078,7 +2086,7 @@ function applyPose() {
 // ================= game state =================
 const S = { p: new THREE.Vector3(), v: new THREE.Vector3(), yaw: 0, grounded: true, mode: 'ski', lift: null, liftS: 0, crashT: 0, steer: 0, maxSpd: 0, tuck: 0, skid: 0, yawRate: 0, edge: 0, latAcc: 0, hockey: false, onFoot: false, walkSpeed: 0, walkPh: 0, airT: 0, land: 0, skate: 0, plant: [0, 0], lastSteerSign: 0, stopSide: 1, prev: new THREE.Vector3() };
 const keys = {};
-window.__game = { S, scene, renderer, camera, crash: w => crash(w), rag: () => RAG, getUp: () => getUp(), hAt, normalAt, lifts, buildings, pistes, restaurants, placeAt: (...a) => placeAt(...a), step: dt => step(dt), keys, tryLift: () => tryLift(), setNear: l => nearLift = l };
+window.__game = { terrainParts: (x, z) => ({ base: hBase(x, z), groomed: hGroomed(x, z), detail: detail(x, z), moguls: moguls(x, z), park: parkH(x, z), pm: pmAt(x, z) }), S, scene, renderer, camera, crash: w => crash(w), rag: () => RAG, getUp: () => getUp(), hAt, normalAt, lifts, buildings, pistes, restaurants, placeAt: (...a) => placeAt(...a), step: dt => step(dt), keys, tryLift: () => tryLift(), setNear: l => nearLift = l };
 addEventListener('keydown', e => {
   if (e.repeat) return;
   if (e.code === 'Escape') {
@@ -2233,7 +2241,7 @@ function step(dt) {
   if (parkGrind(dt)) { collide(); return; }
   const spd = S.v.length();
   S.tuck += ((tuck && spd > 9 ? 1 : 0) - S.tuck) * Math.min(1, dt * 5);
-  const groomed = sstep(0.35, 0.75, pmAt(S.p.x, S.p.z)), groomK = (0.55 + 0.45 * groomed) * ENV.condGrip; // edge hold: corduroy vs powder, icy mornings
+  const groomed = sstep(0.35, 0.75, pmAt(S.p.x, S.p.z)), groomK = (0.55 + 0.45 * groomed) * (ENV.condGrip + (1 - ENV.condGrip) * EQ().ice); // edge hold: corduroy vs powder, icy mornings (race skis still bite)
   // edges are rolled on progressively (~0.5 s to full edge) — turns have to be built, they don't snap
   S.edge += clamp(steerIn - S.edge, -dt * 2.2 * EQ().roll, dt * 2.2 * EQ().roll);
   if (steerIn) S.lastSteerSign = steerIn;
@@ -2241,10 +2249,10 @@ function step(dt) {
   let wantYawRate;
   if (!S.grounded) wantYawRate = S.steer * (PARK.near || S.airT > 0.5 ? 4.6 : 2.2);                     // spin in the air
   else {
-    const pivot = S.edge * 1.2;                                      // slow speed: skidded pivot turns
+    const pivot = S.edge * 1.2 * EQ().pivot;                                      // slow speed: skidded pivot turns
     const radius = EQ().radius / Math.max(0.08, Math.abs(S.edge));            // carving: ~12 m radius at full edge, wide arcs with a little edge
     const carve = Math.sign(S.edge) * spd / radius;
-    const aMax = G * (0.55 + 0.95 * groomK);                         // what the edges can hold (~1.5 g groomed, ~1.1 g powder)
+    const aMax = G * (0.55 + 0.95 * groomK) * EQ().grip;                         // what the edges can hold (~1.5 g groomed, ~1.1 g powder)
     const lim = aMax / Math.max(spd, 0.5);
     let w = carve; if (Math.abs(w) > lim) w = Math.sign(w) * (lim + (Math.abs(w) - lim) * 0.25); // asking for more: the skis skid
     const t = sstep(2, 7, spd);
@@ -2257,9 +2265,9 @@ function step(dt) {
   if (S.grounded && spd > 3) {
     // over a kicker lip or a crest the snow curves away; once keeping you on it would need more than gravity
     // (v·n per step > g·n), you fly on with the velocity you had
-    const n0 = normalAt(S.p.x, S.p.z, _n, 1.5), vn0 = S.v.dot(n0);
-    S.unload = (S.unload || 0) + (vn0 / dt - (S.unload || 0)) * Math.min(1, dt * 60);
-    if (S.unload > G * n0.y * 1.2) { S.grounded = false; S.unload = 0; S.p.y += 0.02; }
+    const n0 = normalAt(S.p.x, S.p.z, _n, 3), vn0 = S.v.dot(n0);
+    S.unload = (S.unload || 0) + (vn0 / dt - (S.unload || 0)) * Math.min(1, dt * 25);
+    if (S.unload > G * n0.y * 1.35) { S.grounded = false; S.unload = 0; S.p.y += 0.02; }
   } else S.unload = 0;
   if (S.grounded) {
     const n = normalAt(S.p.x, S.p.z).clone();
@@ -2288,7 +2296,7 @@ function step(dt) {
     S.v.copy(tmpF).multiplyScalar(vf).addScaledVector(tmpL, vl);
     S.v.x += n.x * n.y * G * dt; S.v.y += (-1 + n.y * n.y) * G * dt; S.v.z += n.z * n.y * G * dt;
     const s = S.v.length();
-    if (tuck && s < 9) S.v.addScaledVector(tmpF, 2.4 * dt);
+    if (tuck && s < 9) S.v.addScaledVector(tmpF, (EQ().board ? 0.8 : 2.4) * dt);   // skating; on a board you can only push with one foot
     const across = s > 0.1 ? Math.abs(vl) / s : 0;
     const mu = hockey ? 0.06 + 0.58 * across : brake ? 0.06 + 0.26 * clamp(1.2 - s / 25, 0.35, 1) : 0.06 + (1 - groomed) * (0.04 + Math.min(0.1, ENV.fresh * 0.004)) * EQ().powder + ENV.condFric * (1 - (S.p.y > 1900 && ENV.condFric > 0.02 ? 0.7 : 0)), k = 0.0042 - S.tuck * 0.0018;
     const decel = mu * G * n.y + k * s * s;
@@ -2338,12 +2346,12 @@ function collide() {
   }
 }
 function crash(why) {
-  S.grind = null; trickReset();
+  const flipV = S.flipV || 0; S.grind = null; trickReset();
   if (S.mode === 'crash') return;
   const v = S.v.clone();
   S.mode = 'crash'; S.grounded = true; S.yawRate = 0; S.hockey = false; S.edge = 0;
   flash(why, 1.6); burst(60); trackBreak();
-  startRagdoll(v);
+  startRagdoll(v, why, flipV);
 }
 
 // ---------- on foot (skis off) ----------
@@ -2400,7 +2408,7 @@ function ragdollVisuals() { // meshes cloned from the skier (same materials), re
   };
   RAG.vis = vis; return vis;
 }
-function startRagdoll(impactVel) {
+function startRagdoll(impactVel, why = '', flipV = 0) {
   ragdollVisuals();
   rig.root.updateMatrixWorld(true);
   const wp = (o, x = 0, y = 0, z = 0) => o.localToWorld(new THREE.Vector3(x, y, z));
@@ -2412,10 +2420,28 @@ function startRagdoll(impactVel) {
   const com = pts.reduce((a, p) => a.add(p), new THREE.Vector3()).multiplyScalar(1 / pts.length);
   const vdir = spd > 0.5 ? v.clone().setY(0).normalize() : new THREE.Vector3(Math.sin(S.yaw), 0, Math.cos(S.yaw));
   const side = new THREE.Vector3(vdir.z, 0, -vdir.x);
-  const omega = new THREE.Vector3().crossVectors(_up, vdir).multiplyScalar(Math.min(4, 1 + spd * 0.12) * (0.85 + Math.random() * 0.3))
-    .addScaledVector(vdir, (Math.random() - 0.5) * Math.min(2, spd * 0.08));
+  // The tumble comes from the crash itself. tdir = direction of travel along the slope, nS = slope normal.
+  const nS = normalAt(com.x, com.z, new THREE.Vector3(), 2), tdir = v.clone().addScaledVector(nS, -v.dot(nS));
+  if (tdir.lengthSq() < 0.01) tdir.set(Math.sin(S.yaw), 0, Math.cos(S.yaw)).addScaledVector(nS, -Math.sin(S.yaw) * nS.x - Math.cos(S.yaw) * nS.z); tdir.normalize();
+  const pitchAx = new THREE.Vector3().crossVectors(nS, tdir).normalize(), jit = () => 0.85 + Math.random() * 0.3, omega = new THREE.Vector3(), launchK = () => 0.7 + Math.random() * 0.6;
+  const skiF = new THREE.Vector3(Math.sin(S.yaw), 0, Math.cos(S.yaw)), slip = Math.sign(skiF.x * tdir.z - skiF.z * tdir.x) || 1;   // which way the skis were pointing relative to travel
+  let launch;                                                                        // thrown off the snow, along the slope normal (m/s)
+  if (/Tree|building|pylon|skier|ski school|groomer|Railway/.test(why)) {            // feet stopped dead, body keeps going: pitched forward over the skis
+    omega.copy(pitchAx).multiplyScalar(clamp(spd / 1.2, 2, 9) * jit()); v.multiplyScalar(0.6); launch = Math.min(2.5, spd * 0.06) * launchK();
+  } else if (/Hard landing/.test(why)) {                                             // legs buckle: sat down and thrown backwards
+    omega.copy(pitchAx).multiplyScalar(-Math.min(5, 1 + spd * 0.12) * jit()); launch = Math.min(1.5, spd * 0.04) * launchK();
+  } else if (/sideways/.test(why)) {                                                  // skis catch across the slope: rolled sideways
+    omega.copy(tdir).multiplyScalar(slip * Math.min(8.5, 1.5 + spd * 0.22) * jit()).addScaledVector(pitchAx, Math.min(3, spd * 0.07)); launch = Math.min(3.5, spd * 0.08) * launchK();
+  } else if (/flip|head/.test(why)) {                                                 // the flip carries on into the snow
+    omega.copy(pitchAx).multiplyScalar(-(flipV || 4.5) * jit()); launch = Math.min(2, spd * 0.05) * launchK();
+  } else if (/avalanche/.test(why)) {
+    omega.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(3 + Math.random() * 3); launch = 0;
+  } else {                                                                            // caught an edge: over the tips, with a roll to the side you slipped
+    omega.copy(pitchAx).multiplyScalar(Math.min(9.5, 1.5 + spd * 0.3) * jit()).addScaledVector(tdir, slip * Math.min(3.5, spd * 0.09)); launch = Math.min(6.5, spd * 0.17) * launchK();
+  }
   const h = 1 / PHYS.hz;
-  RAG.P = pts; RAG.prev = pts.map(p => { const r = p.clone().sub(com), vi = v.clone().add(new THREE.Vector3().crossVectors(omega, r)); vi.y += 0.2; return p.clone().addScaledVector(vi, -h); });
+  RAG.P = pts; RAG.prev = pts.map(p => { const r = p.clone().sub(com), vi = v.clone().add(new THREE.Vector3().crossVectors(omega, r)).addScaledVector(nS, launch); return p.clone().addScaledVector(vi, -h); });
+  RAG.dtPrev = h; RAG.n = null;                                                       // velocities above are per 1/240 s step
   RAG.w = RAG_MASS.map(m => 1 / m);
   RAG.cons = [];
   const c = (a, b, k = 1) => RAG.cons.push([a, b, pts[a].distanceTo(pts[b]), k, 0]);
@@ -2426,7 +2452,8 @@ function startRagdoll(impactVel) {
   c(J.lHip, J.lKn); c(J.lKn, J.lAn); c(J.rHip, J.rKn); c(J.rKn, J.rAn);
   // joint ranges (minimum distances): limbs can't fold flat or pass through the body
   RAG.cons.push([J.lHip, J.lAn, 0, 1, 0.3], [J.rHip, J.rAn, 0, 1, 0.3], [J.lSh, J.lHa, 0, 1, 0.2], [J.rSh, J.rHa, 0, 1, 0.2], [J.lKn, J.rKn, 0, 1, 0.14], [J.lAn, J.rAn, 0, 1, 0.14],
-    [J.lHa, J.pelvis, 0, 1, 0.18], [J.rHa, J.pelvis, 0, 1, 0.18], [J.lKn, J.neck, 0, 1, 0.38], [J.rKn, J.neck, 0, 1, 0.38], [J.lAn, J.pelvis, 0, 1, 0.3], [J.rAn, J.pelvis, 0, 1, 0.3]);
+    [J.lHa, J.pelvis, 0, 1, 0.18], [J.rHa, J.pelvis, 0, 1, 0.18], [J.lKn, J.neck, 0, 1, 0.38], [J.rKn, J.neck, 0, 1, 0.38], [J.lAn, J.pelvis, 0, 1, 0.3], [J.rAn, J.pelvis, 0, 1, 0.3],
+    [J.lAn, J.rAn, 0, 1, 0, 0.9], [J.lKn, J.rKn, 0, 1, 0, 0.62]);   // legs can't split sideways further than a hip allows
   // knees and elbows are hinges: they only bend the way they were bent when you fell
   const fwd = ragFwd(pts, new THREE.Vector3());
   const bend = (a, m, b, def) => { const d = pts[m].clone().sub(pts[a].clone().add(pts[b]).multiplyScalar(0.5)).dot(fwd); return Math.abs(d) > 0.02 ? Math.sign(d) : def; };
@@ -2450,74 +2477,201 @@ function startRagdoll(impactVel) {
   RAG.vis.grp.visible = true; rig.root.visible = false;
 }
 const RAG_MASS = [5, 16, 16, 3.5, 2, 0.8, 3.5, 2, 0.8, 7, 5, 3.5, 7, 5, 3.5]; // kg at each joint particle (ski boots are heavy)
+// pairs across a joint: their relative motion along the pair is damped (muscle tone), which stops limbs flapping
+// without slowing down the body's rotation as a whole
+const RAG_BRACE = [[J.lHip, J.lAn], [J.rHip, J.rAn], [J.lSh, J.lHa], [J.rSh, J.rHa], [J.head, J.pelvis], [J.lKn, J.rKn], [J.lHa, J.rHa]];
+const RAG_TUNE = { skid: 1.0, skidIce: 0.7, skidPowder: 0.5, plough: 0.009, ploughPowder: 0.02, e: 0.36, eIce: 0.42, ePowder: 0.14, eMin: 4, eFull: 8, tone: 9, loadG: 3, kick: 1, relMax: 22, roll: 3.0, air: 0.008 };
 function ragFwd(P, out) { // the body's forward axis from the rigid torso
   const up = _rv.copy(P[J.neck]).sub(P[J.pelvis]), across = _rv2.copy(P[J.lHip]).sub(P[J.rHip]);
   return out.crossVectors(across, up).normalize();
 }
-const _rt = new THREE.Vector3();
-function ragPush(p, prev, r, n, mu) { // position-based contact: out along the slope normal, then Coulomb friction scaled by how hard it was pressed in
-  const d = hAt(p.x, p.z) + r - p.y; if (d <= 0) return;
-  const dn = d * n.y; p.addScaledVector(n, dn);
-  const t = _rt.copy(p).sub(prev); t.addScaledVector(n, -t.dot(n)); const tl = t.length(), lim = mu * dn;
-  if (tl <= lim) p.sub(t); else p.addScaledVector(t, -lim / tl);
+function ragSurface(x, z) { // how the snow under the body behaves
+  const T = RAG_TUNE, groomed = sstep(0.3, 0.7, pmAt(x, z)), ice = ENV.condGrip < 0.8 ? 1 : 0, deep = (1 - groomed) * Math.min(1, 0.35 + ENV.fresh / 40);
+  return {
+    mu: (ice ? T.skidIce : T.skid) + T.skidPowder * deep,                         // skidding flat: suit on hard snow ... ploughing through powder
+    e: (ice ? T.eIce : T.e) - (T.e - T.ePowder) * deep,                           // rebound: hard snow bounces you, powder swallows you
+    sink: deep * Math.min(0.2, 0.05 + ENV.fresh / 150), deep,
+    plough: T.plough + T.ploughPowder * deep,                                     // drag from pushing snow ahead of a sliding body
+  };
 }
-function ragSoft(p, prev, r, n) { if (p.y > hAt(p.x, p.z) + r + 0.01) return; const vel = _rv.copy(p).sub(prev), vn = vel.dot(n); if (vn > 0) prev.addScaledVector(n, vn * 0.7); }
-const _rf = new THREE.Vector3(), _rc = new THREE.Vector3(), _rcv = new THREE.Vector3();
-function ragStep(dt) {
+const _rf = new THREE.Vector3(), _rc = new THREE.Vector3(), _rcv = new THREE.Vector3(), _rt = new THREE.Vector3();
+function ragNoDig(i, d) { // a joint limit may turn a limb, but it must never push it into the snow (the snow would push back and the body would be kicked)
+  const p = RAG.P[i], nn = RAG.n[i], h = RAG.gy[i] - nn.x / nn.y * (p.x - RAG.ox[i]) - nn.z / nn.y * (p.z - RAG.oz[i]);
+  if (p.y - (h + RAG.rad[i] - RAG.sink) < 0.06) { const into = d.dot(nn); if (into < 0) d.addScaledVector(nn, -into); }
+  return d;
+}
+function ragSolve(limits) { // one pass over the bones, the joint limits (only when asked) and the loose skis / poles (mass-weighted, so heavy parts move less)
+  const P = RAG.P, Wm = RAG.w, act = RAG.act, cons = RAG.cons;
+  for (let ci = 0; ci < cons.length; ci++) {
+    const [a, b, rest, k, min, max] = cons[ci], pa = P[a], pb = P[b], d = _rv.copy(pb).sub(pa), len = d.length() || 1e-6;
+    let diff;
+    if (max) { if (len <= max) continue; diff = (len - max) / len; act[ci] = 1; } else if (min) { if (len >= min) continue; diff = (len - min) / len; act[ci] = 1; } else diff = (len - rest) / len;
+    const wa = Wm[a], wb = Wm[b], f = k * diff / (wa + wb);
+    pa.addScaledVector(d, wa * f); pb.addScaledVector(d, -wb * f);
+  }
+  ragFwd(P, _rf);
+  // Both limits below are position constraints whose corrections sum to zero when weighted by mass, so they can never
+  // add momentum to the body (they only turn the limb, never push the whole body).
+  if (limits) RAG.hinges.forEach(([a, m, b, sg], hi) => { // knees and elbows only bend the way they were bent
+    _rc.copy(P[a]).add(P[b]).multiplyScalar(0.5);
+    const C = _rv.copy(P[m]).sub(_rc).dot(_rf) * sg - 0.015;                      // signed distance of the joint in front of the line between its neighbours
+    if (C < 0) {
+      const wm = Wm[m], wa = Wm[a], wb = Wm[b], lam = Math.min(0.012 * RAG.ds, -C * 0.5) / (wm + 0.25 * wa + 0.25 * wb);
+      P[m].add(ragNoDig(m, _rt.copy(_rf).multiplyScalar(lam * wm * sg))); P[a].add(ragNoDig(a, _rt.copy(_rf).multiplyScalar(-0.5 * lam * wa * sg))); P[b].add(ragNoDig(b, _rt.copy(_rf).multiplyScalar(-0.5 * lam * wb * sg))); RAG.actH[hi] = 1;
+    }
+  });
+  // hips can't stretch far backwards: the thigh stays within ~20° behind the torso
+  if (limits) [[J.lHip, J.lKn, 0], [J.rHip, J.rKn, 1]].forEach(([hp, kn, i]) => {
+    const t = _rv.copy(P[kn]).sub(P[hp]), tl = t.length() || 1e-6, sg = RAG.kneeSide[i], C = t.dot(_rf) * sg + 0.35 * tl;
+    if (C < 0) { const wk = Wm[kn], wh = Wm[hp], lam = Math.min(0.012 * RAG.ds, -C * 0.4) / (wk + wh); P[kn].add(ragNoDig(kn, _rt.copy(_rf).multiplyScalar(lam * wk * sg))); P[hp].add(ragNoDig(hp, _rt.copy(_rf).multiplyScalar(-lam * wh * sg))); RAG.actHip[i] = 1; }
+  });
+  for (const L of RAG.loose) { const d = _rv.copy(L.b).sub(L.a), len = d.length() || 1e-6; d.multiplyScalar(0.5 * (len - L.len) / len); L.a.add(d); L.b.sub(d); }
+}
+// Joint stops are inelastic. A limit is enforced by moving positions, and a position change reads as a velocity, so without this
+// every stop would be a perfectly elastic wall (and a whipping leg could bounce off its knee limit faster than it arrived).
+// For every limit that was active this step, the velocity that points back out of it is removed, weighted by mass so no momentum is added.
+function ragLimitVelocities() {
+  const P = RAG.P, prev = RAG.prev, Wm = RAG.w, act = RAG.act, cons = RAG.cons, v = (i, out) => out.copy(P[i]).sub(prev[i]);
+  for (let ci = 0; ci < cons.length; ci++) {
+    if (!act[ci]) continue;
+    const [a, b, , , min, max] = cons[ci], u = _rv.copy(P[b]).sub(P[a]).normalize(), rel = v(b, _rc).sub(v(a, _rcv)).dot(u);
+    if ((min && rel > 0) || (max && rel < 0)) { const wa = Wm[a], wb = Wm[b]; prev[a].addScaledVector(u, -rel * wa / (wa + wb)); prev[b].addScaledVector(u, rel * wb / (wa + wb)); }
+  }
+  ragFwd(P, _rf);
+  RAG.hinges.forEach(([a, m, b, sg], hi) => {
+    if (!RAG.actH[hi]) return;
+    const cd = (v(m, _rv).dot(_rf) - 0.5 * v(a, _rc).dot(_rf) - 0.5 * v(b, _rcv).dot(_rf)) * sg;   // how fast the joint is moving back into its range
+    if (cd > 0) { const wm = Wm[m], wa = Wm[a], wb = Wm[b], lam = cd / (wm + 0.25 * wa + 0.25 * wb); prev[m].addScaledVector(_rf, lam * wm * sg); prev[a].addScaledVector(_rf, -0.5 * lam * wa * sg); prev[b].addScaledVector(_rf, -0.5 * lam * wb * sg); }
+  });
+  [[J.lHip, J.lKn, 0], [J.rHip, J.rKn, 1]].forEach(([hp, kn, i]) => {
+    if (!RAG.actHip[i]) return;
+    const sg = RAG.kneeSide[i], cd = (v(kn, _rv).dot(_rf) - v(hp, _rc).dot(_rf)) * sg;
+    if (cd > 0) { const wk = Wm[kn], wh = Wm[hp], lam = cd / (wk + wh); prev[kn].addScaledVector(_rf, lam * wk * sg); prev[hp].addScaledVector(_rf, -lam * wh * sg); }
+  });
+}
+function ragStep(dt) { // fast tumbles take smaller steps, so that no particle travels more than ~4 cm per pass (otherwise limbs sink deep into the snow before they are pushed out)
+  let v = 0; const last = RAG.dtPrev || dt;
+  for (let i = 0; i < RAG.P.length; i++) v = Math.max(v, RAG.P[i].distanceTo(RAG.prev[i]) / last);
+  const k = RAG.high ? 1 : clamp(Math.ceil(v * dt / 0.04), 1, 4);
+  for (let i = 0; i < k; i++) ragSub(dt / k);
+}
+function ragSub(dt) {
+  if (RAG.dtPrev && Math.abs(RAG.dtPrev - dt) > 1e-9) { // Verlet keeps displacement per step, so a different step size means rescaling the stored velocities
+    const f = dt / RAG.dtPrev;
+    for (let i = 0; i < RAG.P.length; i++) { _rv.copy(RAG.P[i]).sub(RAG.prev[i]).multiplyScalar(f); RAG.prev[i].copy(RAG.P[i]).sub(_rv); }
+    for (const L of RAG.loose) for (const [p, q] of [[L.a, L.pa], [L.b, L.pb]]) { _rv.copy(p).sub(q).multiplyScalar(f); q.copy(p).sub(_rv); }
+  }
+  RAG.dtPrev = dt; RAG.ds = dt * PHYS.hz;                                             // 1 at the normal step, 1/4 at four substeps
   RAG.t += dt; RAG.impactCd -= dt;
-  const g = -G * dt * dt, P = RAG.P, prev = RAG.prev, Wm = RAG.w;
-  let maxV = 0, hit = 0;
-  // joint friction / muscle tone: motion relative to the body's centre of mass dies down (no jelly wobble)
-  let M = 0; _rcv.set(0, 0, 0);
-  for (let i = 0; i < P.length; i++) { const m = RAG_MASS[i]; M += m; _rcv.x += (P[i].x - prev[i].x) * m; _rcv.y += (P[i].y - prev[i].y) * m; _rcv.z += (P[i].z - prev[i].z) * m; }
-  _rcv.multiplyScalar(1 / M);
-  const keep = 1 - Math.min(0.5, 1.6 * dt);
-  if (!RAG.n) { RAG.n = P.map(() => new THREE.Vector3()); RAG.nL = new THREE.Vector3(); }
-  for (let i = 0; i < P.length; i++) normalAt(P[i].x, P[i].z, RAG.n[i], 1.5);
-  normalAt(P[J.pelvis].x, P[J.pelvis].z, RAG.nL, 2);
-  for (let i = 0; i < P.length; i++) { // integrate
-    const p = P[i], q = prev[i];
-    const vx = _rcv.x + (p.x - q.x - _rcv.x) * keep, vy = _rcv.y + (p.y - q.y - _rcv.y) * keep, vz = _rcv.z + (p.z - q.z - _rcv.z) * keep;
-    const drag = 1 - 0.004 * Math.hypot(vx, vy, vz);                                      // air drag
+  const T = RAG_TUNE, g = -G * dt * dt, P = RAG.P, prev = RAG.prev, Wm = RAG.w, n = P.length;
+  let hit = 0, hitI = 0;
+  if (!RAG.n) { RAG.n = P.map(() => new THREE.Vector3()); RAG.nL = new THREE.Vector3(); RAG.gy = new Float64Array(n); RAG.ox = new Float64Array(n); RAG.oz = new Float64Array(n); RAG.vin = new Float64Array(n); RAG.acc = new Float64Array(n); RAG.vpn = new Float64Array(n); RAG.touch = new Uint8Array(n); RAG.act = new Uint8Array(RAG.cons.length); RAG.actH = new Uint8Array(4); RAG.actHip = new Uint8Array(2); }
+  const SF = ragSurface(P[J.pelvis].x, P[J.pelvis].z), n_ = RAG.n, gy = RAG.gy, ox = RAG.ox, oz = RAG.oz, vin = RAG.vin, acc = RAG.acc, vpn = RAG.vpn, touched = RAG.touch; acc.fill(0); RAG.act.fill(0); RAG.actH.fill(0); RAG.actHip.fill(0);
+  // The snow under the body: one slope normal (taken at the pelvis) for all particles, and every particle's own height as a plane
+  // through that point. While the whole body is high in the air no terrain is queried at all.
+  const pl = P[J.pelvis], gP = hAt(pl.x, pl.z), nP = RAG.nL; normalAt(pl.x, pl.z, nP, 1.5);
+  const slx = -nP.x / nP.y, slz = -nP.z / nP.y, high = pl.y - gP > 2.4; RAG.high = high;
+  for (let i = 0; i < n; i++) { const p = P[i]; ox[i] = p.x; oz[i] = p.z; n_[i].copy(nP); gy[i] = high ? gP + slx * (p.x - pl.x) + slz * (p.z - pl.z) : hAt(p.x, p.z); }
+  // muscle tone along the braces (damps folding / unfolding only, not the body's rotation as a whole)
+  const kd = Math.min(0.5, T.tone * dt);
+  for (const [a, b] of RAG_BRACE) {
+    const d = _rv.copy(P[b]).sub(P[a]), len = d.length() || 1e-6; d.multiplyScalar(1 / len);
+    const va = _rv2.copy(P[a]).sub(prev[a]), vb = _rc.copy(P[b]).sub(prev[b]), rel = (vb.sub(va)).dot(d) * kd, wa = Wm[a], wb = Wm[b];
+    prev[a].addScaledVector(d, -rel * wa / (wa + wb)); prev[b].addScaledVector(d, rel * wb / (wa + wb));
+  }
+  for (let i = 0; i < n; i++) { // integrate (tiny air drag)
+    const p = P[i], q = prev[i], vx = p.x - q.x, vy = p.y - q.y, vz = p.z - q.z, drag = 1 - T.air * Math.hypot(vx, vy, vz);   // quadratic air drag: ~0.5 rho Cd A / m with a drag area of ~0.8 m2 for a tumbling body (terminal speed near 130 km/h)
+    const vnn = vx * n_[i].x + vy * n_[i].y + vz * n_[i].z; vpn[i] = vnn; vin[i] = Math.max(0, -vnn);       // how fast it was heading into the snow (m per step)
     q.copy(p); p.x += vx * drag; p.y += vy * drag + g; p.z += vz * drag;
   }
   for (const L of RAG.loose) for (const [p, q] of [[L.a, L.pa], [L.b, L.pb]]) { const vx = p.x - q.x, vy = p.y - q.y, vz = p.z - q.z; q.copy(p); p.x += vx; p.y += vy + g; p.z += vz; }
-  const mu = 0.7 + 0.45 * (1 - sstep(0.3, 0.7, pmAt(P[J.pelvis].x, P[J.pelvis].z)));   // ski suit on packed snow vs sinking into powder
-  for (let i = 0; i < P.length; i++) { const p = P[i], n = RAG.n[i], gy = hAt(p.x, p.z) + RAG.rad[i]; if (p.y < gy) hit = Math.max(hit, -(_rv.copy(p).sub(prev[i]).dot(n)) / dt); }
-  const nL = RAG.nL;
-  for (let it = 0; it < 20; it++) { // constraints (mass-weighted), joint hinges, then the snow
-    for (const [a, b, rest, k, min] of RAG.cons) {
-      const pa = P[a], pb = P[b], d = _rv.copy(pb).sub(pa), len = d.length() || 1e-6;
-      let diff;
-      if (min) { if (len >= min) continue; diff = (len - min) / len; } else diff = (len - rest) / len;
-      const wa = Wm[a], wb = Wm[b], f = k * diff / (wa + wb);
-      pa.addScaledVector(d, wa * f); pb.addScaledVector(d, -wb * f);
+  RAG.sink = SF.sink;
+  for (let it = 0; it < 18; it++) { // bones and joints, then out of the snow (using the plane)
+    ragSolve(it === 0 || it === 9);                                              // joint limits only now and then: they limit, they must not drive
+    for (let i = 0; i < n; i++) {
+      const p = P[i], nn = n_[i], h = gy[i] - nn.x / nn.y * (p.x - ox[i]) - nn.z / nn.y * (p.z - oz[i]), d = h + RAG.rad[i] - SF.sink - p.y;
+      if (d > 0) { p.addScaledVector(nn, d * nn.y); acc[i] += d * nn.y; }
     }
-    ragFwd(P, _rf);
-    for (const [a, m, b, sg] of RAG.hinges) {
-      _rc.copy(P[a]).add(P[b]).multiplyScalar(0.5);
-      const sd = _rv.copy(P[m]).sub(_rc).dot(_rf) * sg;
-      if (sd < 0.015) { const corr = Math.min(0.03, (0.015 - sd) * 0.5) * sg; P[m].addScaledVector(_rf, corr * 0.7); P[a].addScaledVector(_rf, -corr * 0.15); P[b].addScaledVector(_rf, -corr * 0.15); }
-    }
-    // hips can't stretch far backwards: the thigh stays within ~20° behind the torso
-    [[J.lHip, J.lKn, 0], [J.rHip, J.rKn, 1]].forEach(([hp, kn, i]) => {
-      const t = _rv.copy(P[kn]).sub(P[hp]), tl = t.length() || 1e-6, ft = t.dot(_rf) * RAG.kneeSide[i] / tl;
-      if (ft < -0.35) { const c = Math.min(0.03, (-0.35 - ft) * tl * 0.4) * RAG.kneeSide[i]; P[kn].addScaledVector(_rf, c); P[hp].addScaledVector(_rf, -c * 0.25); }
-    });
-    for (const L of RAG.loose) { const d = _rv.copy(L.b).sub(L.a), len = d.length() || 1e-6; d.multiplyScalar(0.5 * (len - L.len) / len); L.a.add(d); L.b.sub(d); }
-    for (let i = 0; i < P.length; i++) ragPush(P[i], prev[i], RAG.rad[i], RAG.n[i], mu);
-    for (const L of RAG.loose) { ragPush(L.a, L.pa, L.r, nL, L.mu); ragPush(L.b, L.pb, L.r, nL, L.mu); }
   }
-  // snow is soft: whatever is in contact doesn't rebound
-  for (let i = 0; i < P.length; i++) ragSoft(P[i], prev[i], RAG.rad[i], RAG.n[i]);
-  for (const L of RAG.loose) { ragSoft(L.a, L.pa, L.r, nL); ragSoft(L.b, L.pb, L.r, nL); }
-  for (let i = 0; i < P.length; i++) maxV = Math.max(maxV, P[i].distanceTo(prev[i]) / dt);
-  for (const L of RAG.loose) if (L.kind === 'ski') { const air = L.a.y > hAt(L.a.x, L.a.z) + 0.08 && L.b.y > hAt(L.b.x, L.b.z) + 0.08; L.rollV *= air ? 0.999 : 0.9; L.roll += L.rollV * dt; if (!air) L.roll += (Math.round(L.roll / Math.PI) * Math.PI - L.roll) * Math.min(1, dt * 6); }
-  if (hit > 2.5 && RAG.impactCd <= 0) { RAG.impactCd = 0.25; const pp = P[J.pelvis]; puff(pp.x, pp.y, pp.z, Math.min(40, hit * 8)); }
-  RAG.settled = maxV < 0.35 ? RAG.settled + dt : 0;
+  const near = RAG.near || (RAG.near = new Uint8Array(n));
+  for (let i = 0; i < n; i++) { const p = P[i], nn = n_[i], h = gy[i] - nn.x / nn.y * (p.x - ox[i]) - nn.z / nn.y * (p.z - oz[i]); near[i] = !high && p.y - (h + RAG.rad[i] - SF.sink) < 0.2 ? 1 : 0; }
+  for (let it = 0; it < 6; it++) { // finish: re-solve the joints each time so nothing is left stretched; the last two passes use the exact surface (only particles near the snow)
+    ragSolve(it === 3);
+    if (high) continue;
+    for (let i = 0; i < n; i++) {
+      if (!near[i]) continue;
+      const p = P[i], nn = n_[i], h = it < 4 ? gy[i] - nn.x / nn.y * (p.x - ox[i]) - nn.z / nn.y * (p.z - oz[i]) : hAt(p.x, p.z), d = h + RAG.rad[i] - SF.sink - p.y;
+      if (d > 0) { p.addScaledVector(nn, d * nn.y); acc[i] += d * nn.y; }
+    }
+  }
+  for (let i = 0; i < n; i++) { const p = P[i]; touched[i] = near[i] && hAt(p.x, p.z) + RAG.rad[i] - SF.sink - p.y > -0.004 ? 1 : 0; }
+  ragLimitVelocities();
+  // contact velocities (per step): Coulomb friction from the real normal impulse, plus a rebound only for hard hits.
+  // A particle on a rolling body barely moves against the snow, so it sticks and the body keeps rolling; a body skidding
+  // flat drags every contact across the snow at once and is braked by friction and by the snow it pushes ahead of it.
+  const thrN = T.eMin * dt, fullN = T.eFull * dt, MT = 82.7;
+  let slideX = 0, slideY = 0, slideZ = 0, slideN = 0;
+  for (let i = 0; i < n; i++) {
+    if (!touched[i]) continue;
+    const nn = n_[i], v = _rv.copy(P[i]).sub(prev[i]), vn = v.dot(nn), vt = _rt.copy(v).addScaledVector(nn, -vn), tl = vt.length();
+    const vout = vin[i] > thrN ? SF.e * vin[i] * sstep(thrN, fullN, vin[i]) : 0;
+    const wt = G * nn.y * dt * dt, Jn = Math.max(Math.min(acc[i], vin[i] + (MT / RAG_MASS[i]) * wt * T.loadG), wt) + vout;   // normal impulse per unit mass: impact + the body weight it carries (at most ~3 g of dynamic load)
+    if (vin[i] / dt > hit) { hit = vin[i] / dt; hitI = i; }
+    const cut = SF.mu * Jn + SF.plough * tl * tl;                                 // friction + ploughing, in m per step
+    const keepT = tl <= cut ? 0 : 1 - cut / tl;
+    slideX += P[i].x; slideY += P[i].y; slideZ += P[i].z; slideN++;
+    const vnFree = vn - acc[i];                                                   // what it would be doing without the snow: contact push-out is not a velocity
+    const vnNew = Math.max(vnFree, vout);                                         // never sinking in; rebounding after a hard hit; free to lift off when the body pivots over it
+    prev[i].copy(P[i]).addScaledVector(vt, -keepT).addScaledVector(nn, -vnNew);
+  }
+  for (let i = 0; i < n; i++) if (acc[i] > 0 && !touched[i]) prev[i].addScaledVector(n_[i], acc[i]);   // pushed out but then lifted away by the joints: that push is not momentum
+  // whole-body rebound: a hard hit throws the whole body back up, not only the particle that touched first
+  { let mPre = 0, mPost = 0, mt = 0, any = 0; const nP = RAG.nL;
+    for (let i = 0; i < n; i++) { const m = RAG_MASS[i]; mt += m; mPre += m * vpn[i]; if (touched[i]) any = 1; mPost += m * (_rv.copy(P[i]).sub(prev[i]).dot(nP)); }
+    const aIn = -mPre / mt / dt;                                                  // m/s the body's centre was heading into the snow
+    if (any && aIn > T.eMin) {
+      const want = T.kick * SF.e * aIn * sstep(T.eMin, T.eFull, aIn) * dt, have = mPost / mt;
+      RAG.kick = [aIn, want / dt, have / dt]; if (have < want) for (let i = 0; i < n; i++) prev[i].addScaledVector(nP, -(want - have));
+    } else RAG.kick = null; }
+  // loose skis and poles: out of the snow, friction (skis slide along their length far more easily than across it)
+  const nL = RAG.nL, LE = RAG.lend || (RAG.lend = new Float64Array(RAG.loose.length * 6)), lsx = -nL.x / nL.y, lsz = -nL.z / nL.y;
+  RAG.loose.forEach((L, k) => { const o = k * 6; LE[o] = L.a.x; LE[o + 1] = L.a.z; LE[o + 2] = hAt(L.a.x, L.a.z); LE[o + 3] = L.b.x; LE[o + 4] = L.b.z; LE[o + 5] = hAt(L.b.x, L.b.z); });
+  const lgy = (k, e, p) => { const o = k * 6 + e * 3; return LE[o + 2] + lsx * (p.x - LE[o]) + lsz * (p.z - LE[o + 1]); };
+  for (let it = 0; it < 3; it++) {
+    RAG.loose.forEach((L, k) => {
+      const d = _rv.copy(L.b).sub(L.a), len = d.length() || 1e-6; d.multiplyScalar(0.5 * (len - L.len) / len); L.a.add(d); L.b.sub(d);
+      [L.a, L.b].forEach((p, e) => { const sd = lgy(k, e, p) + L.r - p.y; if (sd > 0) p.addScaledVector(nL, sd * nL.y); });
+    });
+  }
+  RAG.loose.forEach((L, k) => {
+    const ax = _rf.copy(L.b).sub(L.a).normalize(); ax.addScaledVector(nL, -ax.dot(nL)).normalize();
+    [[L.a, L.pa], [L.b, L.pb]].forEach(([p, q], e) => {
+      if (p.y > lgy(k, e, p) + L.r + 0.01) return;
+      const v = _rv.copy(p).sub(q), vn = v.dot(nL), vt = v.addScaledVector(nL, -vn), along = vt.dot(ax), Jn = G * nL.y * dt * dt + Math.max(0, -vn) * 0.5;
+      const cutA = (L.kind === 'ski' ? 0.1 : L.mu) * Jn, cutX = L.mu * Jn;
+      const sa = Math.sign(along) * Math.max(0, Math.abs(along) - cutA), xv = _rc.copy(vt).addScaledVector(ax, -along), xl = xv.length(), xs = xl <= cutX ? 0 : 1 - cutX / xl;
+      q.copy(p).addScaledVector(ax, -sa).addScaledVector(xv, -xs).addScaledVector(nL, -(vn > 0 ? vn * 0.3 : 0));
+    });
+  });
+  // slow body: the limbs' motion relative to the body's centre is damped away (no endless wobbling when it has stopped)
+  _rcv.set(0, 0, 0); { let mt = 0; for (let i = 0; i < n; i++) { const m = RAG_MASS[i]; mt += m; _rcv.x += (P[i].x - prev[i].x) * m; _rcv.y += (P[i].y - prev[i].y) * m; _rcv.z += (P[i].z - prev[i].z) * m; } _rcv.multiplyScalar(1 / mt); }
+  let mTouch = 0; for (let i = 0; i < n; i++) if (touched[i]) mTouch += RAG_MASS[i];
+  const comSp = _rcv.length() / dt, rollK = 1 - Math.exp(-T.roll * (mTouch / 82.7) * dt);        // rolling resistance: the snow gives a bit under a tumbling body and robs it of spin
+  let calm = sstep(1.5, 0.3, comSp) * 0.2 * RAG.ds; calm = 1 - (1 - calm) * (1 - rollK);
+  if (calm > 0.001) for (let i = 0; i < n; i++) { _rv.copy(P[i]).sub(prev[i]).sub(_rcv).multiplyScalar(1 - calm).add(_rcv); prev[i].copy(P[i]).sub(_rv); }
+  // a limb can't whip faster than a human limb can: its speed relative to the body's centre is capped (only ever removes energy)
+  { const cap = T.relMax * dt;
+    for (let i = 0; i < n; i++) { _rv.copy(P[i]).sub(prev[i]).sub(_rcv); const l = _rv.length(); if (l > cap) { _rv.multiplyScalar(cap / l).add(_rcv); prev[i].copy(P[i]).sub(_rv); } } }
+  // how fast the body is moving, and whether it has come to rest
+  let maxV = 0, ex = 0, ez = 0; for (let i = 0; i < n; i++) { maxV = Math.max(maxV, P[i].distanceTo(prev[i]) / dt); ex += (P[i].x - prev[i].x) * RAG_MASS[i]; ez += (P[i].z - prev[i].z) * RAG_MASS[i]; }
+  RAG.loose.forEach((L, k) => { if (L.kind !== 'ski') return; const air = L.a.y > lgy(k, 0, L.a) + 0.08 && L.b.y > lgy(k, 1, L.b) + 0.08; L.rollV *= air ? 0.999 : 0.9; L.roll += L.rollV * dt; if (!air) L.roll += (Math.round(L.roll / Math.PI) * Math.PI - L.roll) * Math.min(1, dt * 6); });
+  // snow spray: a burst where it hits, and a stream where a fast body digs through powder
+  if (hit > 2.5 && RAG.impactCd <= 0) { const p = P[hitI]; RAG.impactCd = 0.12; puff(p.x, p.y, p.z, Math.min(60, hit * (5 + 25 * SF.deep))); }
+  if (SF.deep > 0.15 && slideN > 0) { const spd = Math.hypot(ex, ez) / (RAG_MASS.reduce((a, b) => a + b, 0) * dt); if (spd > 2 && Math.random() < spd * dt * 0.8) puff(slideX / slideN, slideY / slideN, slideZ / slideN, 1 + Math.floor(SF.deep * 3)); }
+  RAG.settled = comSp < 0.12 && maxV < 0.9 ? RAG.settled + dt : 0;
   // the camera and minimap follow the body
   const pel = P[J.pelvis]; S.p.set(pel.x, hAt(pel.x, pel.z), pel.z); S.v.copy(pel).sub(prev[J.pelvis]).multiplyScalar(1 / dt);
-  if ((RAG.settled > 0.4 || RAG.t > 3.5) && !RAG.done) { RAG.done = true; showPromptR(); }
+  if ((RAG.settled > 0.5 || RAG.t > 6) && !RAG.done) { RAG.done = true; showPromptR(); }   // at rest, or after a few seconds even if it is still sliding (R works any time after 0.8 s)
 }
 function showPromptR() { $('prompt').style.display = 'block'; $('prompt').innerHTML = 'Press <b>R</b> to get back up'; }
 const _bx = new THREE.Vector3(), _by = new THREE.Vector3(), _bz = new THREE.Vector3();
@@ -3307,12 +3461,14 @@ const _flipQ = new THREE.Quaternion(), _xAxis = new THREE.Vector3(1, 0, 0), rigB
 // ================= equipment, outfit, ski touring, avalanche transceiver =================
 // Each set of skis (or the board) changes how the physics behaves: sidecut radius, edge hold, how fast you can roll
 // onto the edges, how much it sinks in powder, and how nervous it gets at high speed.
+// radius: sidecut turn radius at full edge · grip: how many g the edges hold · roll: how fast you get onto the edges
+// ice: how much of the edge hold survives on hard / icy snow · powder: drag in deep snow · stable: speed (km/h) above which they chatter
 const EQUIP = {
-  allmtn: { name: 'All-mountain skis', radius: 13, grip: 1, roll: 1, powder: 1, stable: 110, len: 1.66, width: 1, tint: '#ffffff' },
-  slalom: { name: 'Slalom race skis', radius: 10, grip: 1.25, roll: 1.4, powder: 1.5, stable: 75, len: 1.62, width: 0.9, tint: '#ff5a4a' },
-  powder: { name: 'Powder skis', radius: 19, grip: 0.85, roll: 0.8, powder: 0.3, stable: 95, len: 1.84, width: 1.6, tint: '#5aa8ff' },
-  touring: { name: 'Touring skis (skins: G)', radius: 16, grip: 0.9, roll: 0.95, powder: 0.6, stable: 80, len: 1.72, width: 1.25, tint: '#b9f06a' },
-  board: { name: 'Snowboard', radius: 8.5, grip: 0.95, roll: 0.85, powder: 0.45, stable: 95, len: 1.56, width: 0, board: true },
+  allmtn: { name: 'All-mountain skis', short: 'All-mountain', desc: 'Do-it-all: medium turns, decent on ice and in powder', radius: 14, grip: 1, roll: 1, ice: 0.35, powder: 1, pivot: 1, stable: 105, len: 1.66, width: 1, tint: '#ffffff' },
+  slalom: { name: 'Slalom race skis', short: 'Slalom', desc: 'Short, stiff race skis: very tight, snappy turns and bite on ice — nervous above 70 km/h, sink in powder', radius: 8.5, grip: 1.45, roll: 1.9, ice: 0.85, powder: 2.0, pivot: 1.35, stable: 70, len: 1.6, width: 0.85, tint: '#ff5a4a' },
+  powder: { name: 'Powder skis', short: 'Powder', desc: 'Wide and long: float and keep speed in deep snow, long lazy turns, slide around on ice', radius: 23, grip: 0.75, roll: 0.65, ice: 0, powder: 0.15, pivot: 0.75, stable: 95, len: 1.86, width: 1.7, tint: '#5aa8ff' },
+  touring: { name: 'Touring skis (skins: G)', short: 'Touring', desc: 'Light touring skis: climb with skins (G); chatter at speed, so-so on ice', radius: 17, grip: 0.85, roll: 0.9, ice: 0.1, powder: 0.55, pivot: 0.95, stable: 65, len: 1.72, width: 1.25, tint: '#b9f06a' },
+  board: { name: 'Snowboard', short: 'Snowboard', desc: 'Sideways stance, tight carves on the toe and heel edge, floats in powder — slow on flats', radius: 8, grip: 1.0, roll: 0.8, ice: 0.2, powder: 0.3, pivot: 1.15, stable: 90, len: 1.56, width: 0, board: true },
 };
 const EQ = () => EQUIP[settings.equip] || EQUIP.allmtn;
 for (const e of Object.values(EQUIP)) e.board = !!e.board;
@@ -3331,6 +3487,7 @@ function addFlap(m) { // jacket and trousers flutter in the wind at speed
 function buildGearVisuals() {
   const M = rig.mats;
   addFlap(M.jacket); addFlap(M.jacket2); addFlap(M.pants);
+  buildBody();
   // snowboard: one deck under both feet, along the direction of travel
   const shape = new THREE.Shape(), L = 0.78, Wd = 0.13;
   shape.moveTo(-Wd, -L + 0.12); shape.quadraticCurveTo(-Wd, -L, 0, -L); shape.quadraticCurveTo(Wd, -L, Wd, -L + 0.12);
@@ -3355,8 +3512,11 @@ function buildGearVisuals() {
   beanie.visible = false; rig.neck.add(beanie);
   applyGear();
 }
+let lastEquip = null;
 function applyGear() {
   if (!rig.mats || !boardMesh) return;
+  if (lastEquip && lastEquip !== settings.equip) flash(EQ().name + ': ' + EQ().desc, 4);
+  lastEquip = settings.equip;
   const M = rig.mats, e = EQ();
   M.jacket.color.set(settings.jacket); M.jacket2.color.set(settings.jacket2); M.pants.color.set(settings.pants); M.helmet.color.set(settings.helmet);
   M.goggle.color.set(LENS[settings.lens] || LENS.orange); if (M.beanie) M.beanie.color.set(settings.jacket);
@@ -3457,6 +3617,102 @@ function updateGearFrame(dt) {
   flapU.amp.value += (clamp((sp - 6) / 22, 0, 1) - flapU.amp.value) * Math.min(1, dt * 3);
   if (beanie && beanie.visible) { const b = beanie.getObjectByName('bobble'); b.position.x = Math.sin(flapU.t.value * 9) * 0.01 * flapU.amp.value; b.position.z = -0.02 * flapU.amp.value; }
   updateLVS(dt);
+}
+
+// ================= skier body: one smooth, skinned ski suit instead of separate shapes =================
+// The suit is generated around the rig in its rest pose (legs and arms hanging straight) as continuous tubes with
+// anatomical cross-sections, and skinned to bones that copy the rig joints every frame — or the ragdoll segments
+// after a fall — so knees, hips, elbows and shoulders bend smoothly.
+const BODY = { mesh: null, bones: [], rigD: null };
+const lerpTab = (tab, y, col) => { // piecewise-linear lookup in a table sorted by descending y
+  if (y >= tab[0][0]) return tab[0][col]; if (y <= tab.at(-1)[0]) return tab.at(-1)[col];
+  for (let i = 1; i < tab.length; i++) if (y >= tab[i][0]) { const a = tab[i - 1], b = tab[i], t = (y - b[0]) / (a[0] - b[0]); return b[col] + (a[col] - b[col]) * t; }
+  return tab.at(-1)[col];
+};
+function rigDrivers() { const L = rig.legs, A = rig.arms; return [rig.pelvis, rig.spine, rig.neck, L[0].hip, L[0].knee, L[0].ankle, L[1].hip, L[1].knee, L[1].ankle, A[0].shoulder, A[0].elbow, A[0].hand, A[1].shoulder, A[1].elbow, A[1].hand]; }
+function ragDrivers(V) { return [V.hips, V.torso, V.head, V.thigh[0], V.shin[0], V.boot[0], V.thigh[1], V.shin[1], V.boot[1], V.upper[0], V.fore[0], V.hand[0], V.upper[1], V.fore[1], V.hand[1]]; }
+function buildBody() {
+  const B = { pelvis: 0, spine: 1, neck: 2, hip: [3, 6], knee: [4, 7], ankle: [5, 8], sh: [9, 12], el: [10, 13], ha: [11, 14] };
+  // rest pose
+  const save = [];
+  rig.root.traverse(o => { if (o.isGroup || o.isObject3D) save.push([o, o.position.clone(), o.quaternion.clone()]); });
+  rig.root.position.set(0, 0, 0); rig.root.quaternion.identity();
+  for (const g of [rig.yawG, rig.roll, rig.tumble, rig.body, rig.pelvis, rig.spine, rig.neck, ...rig.legs.flatMap(l => [l.hip, l.knee, l.ankle]), ...rig.arms.flatMap(a => [a.shoulder, a.elbow, a.hand])]) g.rotation.set(0, 0, 0);
+  rig.pelvis.position.set(0, 0.95, 0);
+  rig.root.updateMatrixWorld(true);
+  const D = rigDrivers(), wp = o => new THREE.Vector3().setFromMatrixPosition(o.matrixWorld);
+  const hipY = wp(D[3]).y, kneeY = wp(D[4]).y, ankY = wp(D[5]).y, spY = wp(D[1]).y, neckY = wp(D[2]).y, shY = wp(D[9]).y, elY = wp(D[10]).y, haY = wp(D[11]).y, shX = Math.abs(wp(D[9]).x), legX = Math.abs(wp(D[3]).x);
+  // bones copy the drivers' world transforms
+  const boneRoot = new THREE.Group(); scene.add(boneRoot);
+  BODY.bones = D.map(d => { const b = new THREE.Bone(); d.matrixWorld.decompose(b.position, b.quaternion, b.scale); boneRoot.add(b); return b; });
+  boneRoot.updateMatrixWorld(true);
+  // geometry
+  const P = [], SI = [], SW = [], idx = [[], [], []], SEG = 18;
+  const tube = (rings) => { // rings: [{ x, y, z, rx, rz, mat, w: [[bone, weight]...] }] from top to bottom
+    const base = P.length / 3;
+    for (const r of rings) {
+      const ws = r.w.filter(([, w]) => w > 0.001).sort((a, b) => b[1] - a[1]).slice(0, 4); const tot = ws.reduce((s, [, w]) => s + w, 0) || 1;
+      for (let k = 0; k < SEG; k++) {
+        const a = k / SEG * Math.PI * 2; P.push(r.x + Math.sin(a) * r.rx, r.y, r.z + Math.cos(a) * r.rz);
+        for (let j = 0; j < 4; j++) { SI.push(ws[j] ? ws[j][0] : 0); SW.push(ws[j] ? ws[j][1] / tot : 0); }
+      }
+    }
+    for (let i = 0; i < rings.length - 1; i++) for (let k = 0; k < SEG; k++) {
+      const a = base + i * SEG + k, b = base + i * SEG + (k + 1) % SEG, c = base + (i + 1) * SEG + k, d = base + (i + 1) * SEG + (k + 1) % SEG;
+      idx[rings[i].mat].push(a, c, b, b, c, d);
+    }
+  };
+  const JK = 0, TR = 1, PA = 2;                      // materials: jacket, trim, trousers
+  // trunk: hips, jacket hem flaring over the trousers, waist, chest, shoulders, high collar
+  const T = [ // y (relative to the spine joint), rx, rz, forward shift, material
+    [0.67, 0.076, 0.072, 0.005, TR], [0.61, 0.078, 0.074, 0.005, TR], [0.57, 0.09, 0.08, 0.005, TR], [0.53, 0.15, 0.10, 0, JK], [0.48, 0.19, 0.118, 0.005, JK],
+    [0.42, 0.195, 0.128, 0.015, JK], [0.34, 0.182, 0.13, 0.018, JK], [0.24, 0.165, 0.12, 0.012, JK], [0.14, 0.152, 0.112, 0.005, JK], [0.07, 0.16, 0.118, 0, JK],
+    [0.02, 0.182, 0.13, -0.005, TR], [-0.01, 0.185, 0.133, -0.008, TR], [-0.025, 0.176, 0.127, -0.012, PA], [-0.06, 0.172, 0.125, -0.015, PA], [-0.11, 0.16, 0.118, -0.015, PA], [-0.15, 0.12, 0.095, -0.01, PA]];
+  tube(T.map(([dy, rx, rz, fz, mat]) => {
+    const y = spY + dy, wsp = sstep(spY - 0.01, spY + 0.15, y), wn = sstep(neckY - 0.03, neckY + 0.07, y) * 0.6;
+    return { x: 0, y, z: fz, rx, rz, mat, w: [[B.pelvis, 1 - wsp], [B.spine, wsp * (1 - wn)], [B.neck, wsp * wn]] };
+  }));
+  // legs: baggy ski trousers from the hip to over the boot cuff
+  const LG = [ // y (relative to the hip joint), rx, rz, forward shift
+    [0.07, 0.105, 0.11, 0], [0, 0.098, 0.104, 0], [-0.1, 0.09, 0.097, 0.002], [-0.22, 0.083, 0.088, 0.004], [-0.34, 0.075, 0.079, 0.006], [-0.42, 0.071, 0.075, 0.008],
+    [-0.46, 0.07, 0.074, 0.009], [-0.52, 0.068, 0.074, 0.004], [-0.6, 0.071, 0.079, -0.01], [-0.68, 0.065, 0.07, -0.006], [-0.74, 0.078, 0.088, 0.004], [-0.79, 0.086, 0.094, 0.006], [-0.82, 0.086, 0.094, 0.006]];
+  for (const i of [0, 1]) {
+    const sx = i === 0 ? legX : -legX;
+    tube(LG.map(([dy, rx, rz, fz]) => {
+      const y = hipY + dy, wp_ = sstep(hipY - 0.02, hipY + 0.08, y) * 0.5, wk = 1 - sstep(kneeY - 0.06, kneeY + 0.06, y), wa = 1 - sstep(ankY + 0.1, ankY + 0.22, y);
+      return { x: sx, y, z: fz, rx, rz, mat: PA, w: [[B.pelvis, wp_], [B.hip[i], (1 - wp_) * (1 - wk)], [B.knee[i], wk * (1 - wa)], [B.ankle[i], wa]] };
+    }));
+  }
+  // arms: sleeves from inside the shoulder to the cuff (the glove's gauntlet goes over it)
+  const AR = [ // y (relative to the shoulder joint), rx, rz, material
+    [0.08, 0.066, 0.07, JK], [0.02, 0.072, 0.075, JK], [-0.04, 0.066, 0.068, JK], [-0.12, 0.061, 0.063, JK], [-0.21, 0.057, 0.059, JK], [-0.28, 0.054, 0.057, JK],
+    [-0.33, 0.052, 0.054, JK], [-0.42, 0.052, 0.054, JK], [-0.5, 0.047, 0.048, JK], [-0.535, 0.055, 0.057, TR], [-0.58, 0.055, 0.057, TR]];
+  for (const i of [0, 1]) {
+    const s = i === 0 ? 1 : -1;
+    tube(AR.map(([dy, rx, rz, mat]) => {
+      const y = shY + dy, inward = Math.max(0, dy + 0.02) * 0.9, wsp = sstep(shY - 0.02, shY + 0.08, y) * 0.6, we = 1 - sstep(elY - 0.06, elY + 0.06, y), wh = 1 - sstep(haY + 0.0, haY + 0.08, y);
+      return { x: s * (shX - inward), y, z: 0, rx, rz, mat, w: [[B.spine, wsp], [B.sh[i], (1 - wsp) * (1 - we)], [B.el[i], we * (1 - wh)], [B.ha[i], wh]] };
+    }));
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+  geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(SI, 4)); geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(SW, 4));
+  const all = []; idx.forEach((l, m) => { geo.addGroup(all.length, l.length, m); all.push(...l); }); geo.setIndex(all);
+  geo.computeVertexNormals();
+  const M = rig.mats;
+  const mesh = new THREE.SkinnedMesh(geo, [M.jacket, M.jacket2, M.pants]);
+  mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false;
+  scene.add(mesh); mesh.updateMatrixWorld(true);
+  mesh.bind(new THREE.Skeleton(BODY.bones));
+  BODY.mesh = mesh; BODY.rigD = D;
+  for (const [o, p, q] of save) { o.position.copy(p); o.quaternion.copy(q); }
+  rig.root.updateMatrixWorld(true);
+}
+function syncBody() { // bones follow the rig, or the ragdoll segments while you're down
+  if (!BODY.mesh) return;
+  const rag = RAG.active && RAG.vis, D = rag ? (RAG.vis.drivers || (RAG.vis.drivers = ragDrivers(RAG.vis))) : BODY.rigD;
+  for (let i = 0; i < D.length; i++) { D[i].updateWorldMatrix(true, false); D[i].matrixWorld.decompose(BODY.bones[i].position, BODY.bones[i].quaternion, BODY.bones[i].scale); }
+  BODY.mesh.visible = rag ? true : rig.root.visible;
 }
 
 // ================= animation =================
@@ -4377,7 +4633,7 @@ function updateHud(dt) {
   if (S.mode === 'ski' && S.grounded && !S.onFoot) { const n = normalAt(S.p.x, S.p.z, new THREE.Vector3()); $('slope').textContent = Math.round(Math.acos(n.y) * 180 / Math.PI) + '°'; } else $('slope').textContent = '—';
   $('region').textContent = regionOf(S.p.x);
   $('clock').textContent = fmtH(ENV.hour) + ' · ' + { clear: '☀ sunny', cloudy: '☁ overcast', snowing: '❄ snowing', fog: '🌫 valley fog' }[ENV.weather];
-  $('snowc').textContent = ENV.cond;
+  $('snowc').textContent = ENV.cond; $('gearv').textContent = EQ().short + (S.skins ? ' · skins on' : '');
   $('aval').innerHTML = `<span class="pill" style="background:${DANGER[ENV.danger].c};color:#111">${ENV.danger}</span> ${DANGER[ENV.danger].n}`;
   if (S.mode === 'lift') $('piste').innerHTML = `Riding <b>${S.lift.name}</b> · ${Math.round(100 * S.liftS / S.lift.len)}% <span style="opacity:.6">(hold F)</span>`;
   else if (S.onFoot) $('piste').innerHTML = `<b>On foot</b> · skis on your shoulder <span style="opacity:.6">(K)</span>`;
@@ -4447,7 +4703,7 @@ addEventListener('resize', resize);
     // fixed-step physics (240 Hz), independent of the frame rate
     if (!window.__game.paused) { physAcc += dt; let k = 0; const h = 1 / PHYS.hz; while (physAcc >= h && k++ < 30) { step(h); physAcc -= h; } if (k >= 30) physAcc = 0; }
     updateNear(S.p.x, S.p.z);
-    animate(dt); updateSpray(dt); updateTracks(); updateTreeShadows(dt); updateFlakes(dt); updateAudio(); updateSounds(dt); updateGearFrame(dt);
+    animate(dt); syncBody(); updateSpray(dt); updateTracks(); updateTreeShadows(dt); updateFlakes(dt); updateAudio(); updateSounds(dt); updateGearFrame(dt);
     updateEnv(dt); saveTick(dt); if (liftsRunning()) liftClock += dt;
     updateAI(dt); updateCats(dt); updateAvalanche(dt); updateLandmarks(dt);
     updateCarriers(liftClock, dt);

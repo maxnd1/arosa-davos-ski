@@ -1,7 +1,32 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "ski", "runtimeExecutable": "node", "runtimeArgs": ["swiss-ski/server.js"], "port": 8642, "url": "http://127.0.0.1:8642" },
-    { "name": "ski-test", "runtimeExecutable": "node", "runtimeArgs": ["swiss-ski/server.js", "8643"], "port": 8643 }
+    {
+      "name": "ski",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "swiss-ski/server.js"
+      ],
+      "port": 8642,
+      "url": "http://127.0.0.1:8642"
+    },
+    {
+      "name": "ski-test",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "swiss-ski/server.js",
+        "8643"
+      ],
+      "port": 8643
+    },
+    {
+      "name": "ski-test2",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "swiss-ski/server.js",
+        "8644"
+      ],
+      "port": 8644
+    }
   ]
 }
