@@ -6,7 +6,8 @@ A browser ski game set in a 1:1 recreation of **Arosa Lenzerheide** (both sides 
 - Real pistes, piste numbers, lifts, pylons, stations, buildings and mountain restaurants from OpenStreetMap (`swiss-ski/osmdata.js`, `swiss-ski/buildings.js`)
 - Landmarks at their real locations (`swiss-ski/landmarks.js`): RhB railway with trains and viaducts, Parsennbahn / Schatzalp-Bahn / Tschuggen Express funiculars (rideable), frozen lakes, churches, the Natureisbahn Davos, Schatzalp, Kirchner Museum, snow parks with kickers, rails, boxes and a halfpipe
 - Time of day, changing weather and snow conditions, avalanche danger, other skiers and a ski school, snow groomers in the evening, lift opening hours, sounds, saved progress
-- Gear: all-mountain, slalom, powder or touring skis, or a snowboard, each with its own handling; jacket, trousers, helmet or beanie and goggle lens of your choice
+- Gear: all-mountain, slalom, powder or touring skis, or a snowboard, each with its own handling
+- Wardrobe (O, or the main menu): a live 3D preview while you pick outfits, helmets (round, race, freestyle, cap, bobble hat), jackets (baggy parka, puffer, race suit, retro anorak), trousers (baggy, cargo, race, joggers), boots, goggles, gloves and poles, nine ski and board designs, and all their colours. Baggy clothes react to speed, wind and turns (a wind slider shows it)
 - Ski touring with skins, and an avalanche transceiver search drill
 - Race mode on 13 real race pistes (World Cup course Silvano Beltrametti, Pedra Grossa, slalom hill ...): start portal, gates, finish, penalties, best times and a ghost of your best run (T menu → Race courses)
 - A bad crash (about 40 km/h or faster) means you cannot just get up: the ski patrol skis down to you and takes you to a valley station, after a really bad one a rescue helicopter flies you out
@@ -53,6 +54,7 @@ It cuts the real ragdoll code out of `swiss-ski/index.html` and drops the body o
 | E | ride the lift you are standing at |
 | F | fast-forward the lift |
 | K | take skis off / put them on (walk with W, jog with Shift) |
+| O | wardrobe: change clothes, boots and ski designs |
 | R | after a minor fall: get back up with your skis on (a bad crash needs the ski patrol) |
 | F3 | show / hide the frame rate |
 | T | teleport to a lift top or restaurant |

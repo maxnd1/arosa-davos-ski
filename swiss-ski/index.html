@@ -40,6 +40,24 @@
   .mapbtns { position:absolute; right:16px; top:16px; display:flex; flex-direction:column; gap:6px; }
   .mapbtns button { width:40px; height:40px; border-radius:9px; border:1px solid var(--line); background:rgba(12,22,38,.8); color:#fff; font-size:20px; cursor:pointer; }
   .mapbtns button:hover { background:rgba(30,45,70,.9); }
+  #menu.ward { background:none; backdrop-filter:none; justify-content:flex-start; padding-left:16px; pointer-events:none; }
+  #menu.ward .mwrap { pointer-events:auto; width:min(480px, calc(100vw - 32px)); max-height:calc(100vh - 32px); padding:16px 18px; background:rgba(10,18,32,.9); }
+  #menu.ward .brand { display:none; }
+  body.wardmode #hud, body.wardmode #mini, body.wardmode #help, body.wardmode #labels, body.wardmode #prompt, body.wardmode #msg, body.wardmode #speedfx { display:none !important; }
+  .wtabs { display:flex; flex-wrap:wrap; gap:6px; margin:2px 0 6px; }
+  .wtabs button { padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:rgba(255,255,255,.06); font-size:13px; }
+  .wtabs button.on { background:var(--accent); border-color:var(--accent); }
+  .wgrid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px; }
+  .wcard { text-align:left; padding:9px 11px; border-radius:10px; border:1px solid var(--line); background:rgba(255,255,255,.05); display:flex; flex-direction:column; gap:3px; }
+  .wcard:hover { background:rgba(255,255,255,.12); } .wcard.on { border-color:var(--accent); background:rgba(227,36,43,.22); }
+  .wcard b { font-size:14px; } .wcard span { font-size:11.5px; opacity:.72; } .wcard canvas { width:100%; height:22px; border-radius:4px; }
+  .wcard .dots { display:flex; gap:4px; opacity:1; } .wcard .dots i { width:16px; height:16px; border-radius:50%; border:1px solid rgba(255,255,255,.3); display:block; }
+  .wlab { font-size:11px; letter-spacing:.1em; text-transform:uppercase; opacity:.6; margin:12px 0 4px; } .wlab em { font-style:normal; opacity:1; }
+  .wsw { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .wsw button { width:26px; height:26px; border-radius:50%; border:2px solid rgba(255,255,255,.25); padding:0; }
+  .wsw button.on { border-color:#fff; box-shadow:0 0 0 2px var(--accent); }
+  .wsw input[type=color] { width:30px; height:26px; padding:0; border:none; background:none; cursor:pointer; }
+  #wardBody input[type=range] { width:100%; }
   #speedfx { position:fixed; inset:0; pointer-events:none; opacity:0; background:radial-gradient(ellipse at center, rgba(0,0,0,0) 52%, rgba(10,20,35,.35) 78%, rgba(10,20,35,.75) 100%); }
   #menu { display:none; align-items:center; justify-content:center; background:rgba(8,16,30,.55); backdrop-filter:blur(3px); }
   .mwrap { width:min(1100px, calc(100vw - 32px)); max-height:calc(100vh - 40px); overflow:auto; padding:28px; border-radius:16px; background:rgba(10,18,32,.86); border:1px solid var(--line); box-shadow:0 20px 60px rgba(0,0,0,.4); }
@@ -92,7 +110,7 @@
 <div id="prompt" class="panel"></div>
 <div id="msg" class="panel"></div>
 <div id="help" class="panel">
-  <b>A</b>/<b>D</b> steer · <b>W</b> tuck / skate · <b>S</b> pizza (snowplough) · <b>Q</b> hockey stop · <b>Space</b> jump · <b>Shift</b>/<b>W</b>/<b>S</b> in the air: grab, flips · <b>E</b> ride lift · <b>F</b> fast-forward lift · <b>T</b> teleport · <b>M</b> map · <b>K</b> skis on/off · <b>R</b> get up · <b>C</b> camera · <b>PgUp</b>/<b>PgDn</b> zoom · <b>Esc</b> menu
+  <b>A</b>/<b>D</b> steer · <b>W</b> tuck / skate · <b>S</b> pizza (snowplough) · <b>Q</b> hockey stop · <b>Space</b> jump · <b>Shift</b>/<b>W</b>/<b>S</b> in the air: grab, flips · <b>E</b> ride lift · <b>F</b> fast-forward lift · <b>T</b> teleport · <b>M</b> map · <b>K</b> skis on/off · <b>O</b> wardrobe · <b>R</b> get up · <b>C</b> camera · <b>PgUp</b>/<b>PgDn</b> zoom · <b>Esc</b> menu
 </div>
 <div id="tele" class="overlay"><div class="inner">
   <h2>Teleport</h2><div style="opacity:.7">Real lifts and mountain restaurants from OpenStreetMap · Esc to close</div>
@@ -106,10 +124,12 @@
   <div id="mMain" class="mpage">
     <button id="mResume" class="big primary">Resume</button>
     <button class="big" data-go="mStart">Choose your start</button>
+    <button class="big" data-go="mWard">Wardrobe</button>
     <button class="big" data-go="mSettings">Settings</button>
     <button class="big" data-go="mControls">Controls</button>
   </div>
   <div id="mStart" class="mpage"><div class="mhead"><button class="ghost" data-go="mMain">← Back</button><h2>Where do you want to start?</h2></div><div id="startGrid" class="grid"></div></div>
+  <div id="mWard" class="mpage"><div class="mhead"><button class="ghost" data-go="mMain">← Back</button><h2>Wardrobe</h2><button class="ghost" id="wardDone" style="margin-left:auto">Done</button></div><div id="wardBody"></div></div>
   <div id="mSettings" class="mpage"><div class="mhead"><button class="ghost" data-go="mMain">← Back</button><h2>Settings</h2></div><form id="setForm" onsubmit="return false"></form></div>
   <div id="mControls" class="mpage"><div class="mhead"><button class="ghost" data-go="mMain">← Back</button><h2>Controls</h2></div>
     <table class="keys">
@@ -122,6 +142,7 @@
       <tr><td><b>E</b> / <b>F</b></td><td>Ride the lift at a valley station · fast-forward the ride</td></tr>
       <tr><td><b>G</b></td><td>Touring skis: skins on / off — walk uphill with W (Shift faster)</td></tr>
       <tr><td><b>B</b> / <b>P</b></td><td>Avalanche transceiver drill: find the buried beacon, then probe and dig (P)</td></tr>
+      <tr><td><b>O</b></td><td>Wardrobe: helmets, jackets, trousers, boots, goggles and ski designs, with a live preview</td></tr>
       <tr><td><b>K</b></td><td>Take your skis off and walk (W, Shift to jog) · put them back on</td></tr>
       <tr><td><b>R</b></td><td>After a minor fall: get back up with your skis on. After a bad crash the ski patrol comes for you</td></tr>
       <tr><td><b>F3</b></td><td>Show the frame rate (Settings → Quality preset for Low / Medium / High / Ultra)</td></tr>
@@ -1939,19 +1960,90 @@ function finalizeChunks() {
 // ================= skier rig =================
 // Detailed skier: shaped carving skis (sidecut, tip/tail rise), plastic boots with buckles, fitted jacket,
 // helmet + mirrored goggles, gloves, poles. Joint hierarchy: root(feet) > yaw > incline > tumble > pelvis > legs / spine > neck / arms.
-function skiTopTexture() {
-  const cv = document.createElement('canvas'); cv.width = 64; cv.height = 512; const c = cv.getContext('2d');
-  c.fillStyle = '#cf2f2d'; c.fillRect(0, 0, 64, 512);
-  c.fillStyle = '#16181c'; c.fillRect(0, 0, 64, 70);                           // tip
-  c.fillStyle = '#cf2f2d'; for (let i = 0; i < 4; i++) c.fillRect(0, 14 + i * 13, 64, 5);
-  c.fillStyle = '#16181c'; c.beginPath(); c.moveTo(0, 150); c.lineTo(64, 120); c.lineTo(64, 150); c.lineTo(0, 180); c.fill();
-  c.beginPath(); c.moveTo(0, 340); c.lineTo(64, 310); c.lineTo(64, 330); c.lineTo(0, 360); c.fill();
-  c.fillStyle = '#f4f4f4'; c.fillRect(28, 190, 8, 110);                       // stripe under the binding
-  c.fillStyle = '#16181c'; c.fillRect(0, 470, 64, 42);                        // tail
-  c.fillStyle = 'rgba(255,255,255,.8)'; c.fillRect(2, 0, 2, 512); c.fillRect(60, 0, 2, 512);
-  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
-  t.repeat.set(1 / 0.13, 1 / 1.66); t.offset.set(0.5, 0.5); return t;
+// ski and board top sheets: every design is drawn on a 64 x 512 canvas (tip at the top, tail at the bottom)
+const SKI_DESIGNS = {
+  classic: { name: 'Classic red', draw: c => {
+    c.fillStyle = '#cf2f2d'; c.fillRect(0, 0, 64, 512);
+    c.fillStyle = '#16181c'; c.fillRect(0, 0, 64, 70);
+    c.fillStyle = '#cf2f2d'; for (let i = 0; i < 4; i++) c.fillRect(0, 14 + i * 13, 64, 5);
+    c.fillStyle = '#16181c'; c.beginPath(); c.moveTo(0, 150); c.lineTo(64, 120); c.lineTo(64, 150); c.lineTo(0, 180); c.fill();
+    c.beginPath(); c.moveTo(0, 340); c.lineTo(64, 310); c.lineTo(64, 330); c.lineTo(0, 360); c.fill();
+    c.fillStyle = '#f4f4f4'; c.fillRect(28, 190, 8, 110);
+    c.fillStyle = '#16181c'; c.fillRect(0, 470, 64, 42);
+    c.fillStyle = 'rgba(255,255,255,.8)'; c.fillRect(2, 0, 2, 512); c.fillRect(60, 0, 2, 512);
+  } },
+  swiss: { name: 'Swiss cross', draw: c => {
+    c.fillStyle = '#d52b1e'; c.fillRect(0, 0, 64, 512);
+    c.fillStyle = '#ffffff'; c.fillRect(24, 196, 16, 112); c.fillRect(10, 238, 44, 30);
+    c.fillStyle = '#16181c'; c.fillRect(0, 0, 64, 56); c.fillRect(0, 478, 64, 34);
+    c.fillStyle = '#ffffff'; c.fillRect(0, 56, 64, 4); c.fillRect(0, 474, 64, 4);
+  } },
+  glacier: { name: 'Glacier blue', draw: c => {
+    const g = c.createLinearGradient(0, 0, 0, 512); g.addColorStop(0, '#0b2a63'); g.addColorStop(0.55, '#2a8fe0'); g.addColorStop(1, '#c4e8ff');
+    c.fillStyle = g; c.fillRect(0, 0, 64, 512);
+    c.strokeStyle = 'rgba(255,255,255,.6)'; c.lineWidth = 5; c.lineCap = 'round';
+    for (let i = 0; i < 7; i++) { c.beginPath(); c.moveTo(0, 70 + i * 60); c.bezierCurveTo(20, 46 + i * 60, 44, 94 + i * 60, 64, 70 + i * 60); c.stroke(); }
+    c.fillStyle = '#0b2a63'; c.fillRect(0, 484, 64, 28);
+  } },
+  stealth: { name: 'Stealth black', draw: c => {
+    c.fillStyle = '#0d0e11'; c.fillRect(0, 0, 64, 512);
+    c.fillStyle = '#9bff3c'; c.fillRect(6, 0, 3, 512); c.fillRect(55, 0, 3, 512); c.fillRect(0, 150, 64, 3); c.fillRect(0, 360, 64, 3);
+    c.fillStyle = '#1c1e24'; c.fillRect(14, 190, 36, 110);
+    c.fillStyle = '#9bff3c'; c.fillRect(28, 200, 8, 90);
+  } },
+  powder: { name: 'Powder gold', draw: c => {
+    c.fillStyle = '#f2f5f8'; c.fillRect(0, 0, 64, 512);
+    c.fillStyle = '#e0a800';
+    for (let i = -2; i < 10; i++) { c.beginPath(); c.moveTo(0, i * 56 + 40); c.lineTo(64, i * 56); c.lineTo(64, i * 56 + 16); c.lineTo(0, i * 56 + 56); c.fill(); }
+    c.fillStyle = '#2b2f36'; c.fillRect(0, 0, 64, 40); c.fillRect(0, 484, 64, 28);
+  } },
+  neon: { name: 'Neon fade', draw: c => {
+    const g = c.createLinearGradient(0, 0, 0, 512); g.addColorStop(0, '#ff2f9e'); g.addColorStop(0.5, '#8a3df0'); g.addColorStop(1, '#19e6ff');
+    c.fillStyle = g; c.fillRect(0, 0, 64, 512);
+    c.fillStyle = 'rgba(10,10,20,.85)'; for (let i = 0; i < 9; i++) c.fillRect(0, 40 + i * 52, 64, 8);
+    c.fillStyle = '#f4f4f4'; c.fillRect(28, 190, 8, 110);
+  } },
+  camo: { name: 'Snow camo', draw: c => {
+    c.fillStyle = '#d4dde3'; c.fillRect(0, 0, 64, 512);
+    let s = 11; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 70; i++) { c.fillStyle = ['#9aa7b1', '#6c7a86', '#eef3f6', '#4b5762'][i % 4]; c.beginPath(); c.ellipse(r() * 64, r() * 512, 6 + r() * 14, 10 + r() * 24, r() * 3, 0, 7); c.fill(); }
+    c.fillStyle = '#23272d'; c.fillRect(0, 0, 64, 34); c.fillRect(0, 486, 64, 26);
+  } },
+  checker: { name: 'Race checker', draw: c => {
+    c.fillStyle = '#f4f4f4'; c.fillRect(0, 0, 64, 512);
+    c.fillStyle = '#16181c';
+    for (const [a, b] of [[0, 72], [224, 288], [440, 512]]) for (let y = a; y < b; y += 8) for (let x = 0; x < 64; x += 8) if (((x + y) / 8) % 2 === 0) c.fillRect(x, y, 8, 8);
+    c.fillStyle = '#d52b1e'; c.fillRect(0, 150, 64, 10); c.fillRect(0, 380, 64, 10);
+  } },
+  sunset: { name: 'Sunset', draw: c => {
+    const g = c.createLinearGradient(0, 0, 0, 512); g.addColorStop(0, '#ffb23e'); g.addColorStop(0.5, '#e0415a'); g.addColorStop(1, '#3b1c6b');
+    c.fillStyle = g; c.fillRect(0, 0, 64, 512);
+    c.fillStyle = '#ffe08a'; c.beginPath(); c.arc(32, 250, 18, 0, 7); c.fill();
+    c.fillStyle = 'rgba(40,10,60,.7)'; for (let i = 0; i < 5; i++) c.fillRect(0, 262 + i * 11, 64, 4 + i);
+  } },
+  carbon: { name: 'Carbon red', draw: c => {
+    c.fillStyle = '#17181b'; c.fillRect(0, 0, 64, 512);
+    c.fillStyle = '#25272c'; for (let y = 0; y < 512; y += 6) for (let x = 0; x < 64; x += 6) if (((x + y) / 6) % 2 === 0) c.fillRect(x, y, 6, 6);
+    c.fillStyle = '#e0112b'; c.fillRect(0, 60, 64, 6); c.fillRect(0, 440, 64, 6); c.fillRect(28, 180, 8, 120);
+  } },
+};
+const SKI_CV = {}, SKI_TEX = {};
+function skiCanvas(d) {
+  d = SKI_DESIGNS[d] ? d : 'classic';
+  if (!SKI_CV[d]) { const cv = document.createElement('canvas'); cv.width = 64; cv.height = 512; SKI_DESIGNS[d].draw(cv.getContext('2d')); SKI_CV[d] = cv; }
+  return SKI_CV[d];
 }
+function skiTex(d, board) {
+  d = SKI_DESIGNS[d] ? d : 'classic'; const key = d + (board ? '/b' : '');
+  if (!SKI_TEX[key]) {
+    const t = new THREE.CanvasTexture(skiCanvas(d)); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+    if (board) t.repeat.set(1 / 0.26, 1 / 1.56); else t.repeat.set(1 / 0.13, 1 / 1.66);
+    t.offset.set(0.5, 0.5); SKI_TEX[key] = t;
+  }
+  return SKI_TEX[key];
+}
+function looseGeo(geo, v) { geo.setAttribute('aLoose', new THREE.Float32BufferAttribute(new Float32Array(geo.attributes.position.count).fill(v), 1)); return geo; }   // how loosely the cloth hangs here (0 = fixed to the body, 1 = free)
+
 function skiGeometry() {
   const L = 1.66, half = L / 2, tipZ = half - 0.12, tailZ = -half + 0.06;
   const wAt = z => {                                                             // half-widths: tip 61 mm, waist 37 mm, tail 52 mm
@@ -1980,11 +2072,12 @@ function makeRig() {
     jacket: std('#1e7b79', 0.8), jacket2: std('#0f1a30', 0.8), pants: std('#141c33', 0.88), boot: std('#eceef0', 0.32), bootDark: std('#23272d', 0.45),
     buckle: std('#a3acb6', 0.3, 0.85), skin: std('#e0ae8a', 0.8), helmet: std('#f2f2f2', 0.22), goggle: std('#ff7a1a', 0.12, 0.85, { side: THREE.DoubleSide }),
     strap: std('#1a1a1a', 0.75, 0, { side: THREE.DoubleSide }), glove: std('#151515', 0.6), pole: std('#c3c9d0', 0.28, 0.9), grip: std('#1b1b1b', 0.85),
-    basket: std('#d9b83a', 0.45, 0.35), gstrap: std('#e8e8ea', 0.6),
-    binding: std('#2c3036', 0.4, 0.35), bindingRed: std('#c8102e', 0.4), skiTop: new THREE.MeshStandardMaterial({ map: skiTopTexture(), roughness: 0.32 }), skiEdge: std('#141618', 0.45, 0.6),
+    basket: std('#d9b83a', 0.45, 0.35), gstrap: std('#e8e8ea', 0.6), pants2: std('#0f1a30', 0.88), accent: std('#a3acb6', 0.35, 0.6),
+    binding: std('#2c3036', 0.4, 0.35), bindingRed: std('#c8102e', 0.4), skiTop: new THREE.MeshStandardMaterial({ map: skiTex('classic'), roughness: 0.32 }), skiEdge: std('#141618', 0.45, 0.6),
   };
   const mesh = (geo, mat, parent, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m; };
   const cap = (r, len) => new THREE.CapsuleGeometry(r, len, 4, 12);
+  const V = { boot: {}, helmet: {}, pockets: [], hood: [] }, vr = (set, k, m) => ((set[k] = set[k] || []).push(m), m);   // clothing variants: only the one picked in the wardrobe is shown
   const root = new THREE.Group(), yawG = new THREE.Group(), roll = new THREE.Group(), tumble = new THREE.Group(), body = new THREE.Group();
   root.add(yawG); yawG.add(roll); roll.add(tumble); tumble.position.y = 0.8; tumble.add(body); body.position.y = -0.8;
   const pelvis = new THREE.Group(); body.add(pelvis);
@@ -1993,13 +2086,20 @@ function makeRig() {
     const hip = new THREE.Group(); hip.position.set(0.095 * s, -0.03, 0); pelvis.add(hip);
     const knee = new THREE.Group(); knee.position.y = -0.46; hip.add(knee);
     const ankle = new THREE.Group(); ankle.position.y = -0.46; knee.add(ankle);
-    // ski boot: cuff + shell + sole + buckles
-    mesh(cap(0.074, 0.12).translate(0, 0.06, -0.005), mats.boot, ankle).scale.set(1, 1, 1.22);
+    // ski boot: a shared shell and sole, plus three cuff shapes (the wardrobe shows one of them)
     mesh(new THREE.BoxGeometry(0.118, 0.11, 0.3).translate(0, -0.075, 0.04), mats.boot, ankle);
     mesh(new THREE.SphereGeometry(0.062, 12, 8).translate(0, -0.07, 0.17), mats.boot, ankle).scale.set(1, 0.85, 1);
     mesh(new THREE.BoxGeometry(0.114, 0.032, 0.33).translate(0, -0.135, 0.04), mats.bootDark, ankle);
-    mesh(new THREE.CylinderGeometry(0.079, 0.079, 0.035, 14, 1, true).translate(0, 0.15, -0.005), mats.bootDark, ankle).scale.set(1, 1, 1.22);
-    for (const [y, z] of [[0.09, 0.07], [0.03, 0.085], [-0.04, 0.12]]) mesh(new THREE.BoxGeometry(0.128, 0.012, 0.028), mats.buckle, ankle, 0, y, z);
+    const bk = (set, y, z, w = 0.128) => vr(V.boot, set, mesh(new THREE.BoxGeometry(w, 0.012, 0.028), mats.accent, ankle, 0, y, z));
+    vr(V.boot, 'allmtn', mesh(cap(0.074, 0.12).translate(0, 0.06, -0.005), mats.boot, ankle)).scale.set(1, 1, 1.22);   // all-mountain: medium cuff, three buckles
+    vr(V.boot, 'allmtn', mesh(new THREE.CylinderGeometry(0.079, 0.079, 0.035, 14, 1, true).translate(0, 0.15, -0.005), mats.accent, ankle)).scale.set(1, 1, 1.22);
+    for (const [y, z] of [[0.09, 0.07], [0.03, 0.085], [-0.04, 0.12]]) bk('allmtn', y, z);
+    vr(V.boot, 'race', mesh(cap(0.078, 0.17).translate(0, 0.085, -0.008), mats.boot, ankle)).scale.set(1, 1, 1.2);        // race: tall stiff cuff, four buckles
+    vr(V.boot, 'race', mesh(new THREE.CylinderGeometry(0.083, 0.083, 0.04, 14, 1, true).translate(0, 0.225, -0.008), mats.accent, ankle)).scale.set(1, 1, 1.2);
+    for (const [y, z] of [[0.17, 0.062], [0.1, 0.078], [0.03, 0.095], [-0.04, 0.122]]) bk('race', y, z, 0.136);
+    vr(V.boot, 'free', mesh(cap(0.07, 0.07).translate(0, 0.04, -0.005), mats.boot, ankle)).scale.set(1, 1, 1.2);          // freestyle: soft and short, two big buckles
+    vr(V.boot, 'free', mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.03, 14, 1, true).translate(0, 0.115, -0.005), mats.accent, ankle)).scale.set(1, 1, 1.2);
+    for (const [y, z] of [[0.06, 0.075], [-0.01, 0.105]]) bk('free', y, z, 0.12);
     // ski with bindings
     const skiG = new THREE.Group(); skiG.position.y = -0.165; ankle.add(skiG);
     const ski = mesh(skiGeo, [mats.skiTop, mats.skiEdge], skiG, 0, 0, 0.03);
@@ -2007,21 +2107,36 @@ function makeRig() {
     mesh(new THREE.BoxGeometry(0.07, 0.04, 0.085), mats.binding, skiG, 0, 0.045, 0.22);
     mesh(new THREE.BoxGeometry(0.075, 0.055, 0.1), mats.binding, skiG, 0, 0.05, -0.16);
     mesh(new THREE.BoxGeometry(0.076, 0.012, 0.05), mats.bindingRed, skiG, 0, 0.08, -0.16);
+    V.pockets.push(mesh(looseGeo(new THREE.BoxGeometry(0.05, 0.16, 0.115), 0.45), mats.pants, hip, s * 0.158, -0.27, 0.01));      // cargo pocket on the outside of the thigh
     return { hip, knee, ankle, skiG, ski };
   });
   const spine = new THREE.Group(); spine.position.y = 0.06; pelvis.add(spine);
   const prof = [[0.135, 0], [0.15, 0.06], [0.165, 0.18], [0.183, 0.31], [0.19, 0.41], [0.165, 0.5], [0.1, 0.56], [0.06, 0.58]].map(([r, y]) => new THREE.Vector2(r, y));
   // zip, chest pocket and a slim backpack sit on the suit; the suit itself is the skinned mesh (buildBody)
   { // a big rounded hood bunched up behind the neck up to the helmet strap (it sits on the spine, so it does not turn with the head)
-    const hood = mesh(new THREE.SphereGeometry(0.16, 24, 16), mats.jacket, spine, 0, 0.665, -0.075); hood.scale.set(0.98, 1.0, 0.9);
-    const cowl = mesh(new THREE.CylinderGeometry(0.14, 0.2, 0.16, 26, 1, true), mats.jacket, spine, 0, 0.58, -0.04); cowl.scale.set(1.05, 1, 0.85);
-    const rim = mesh(new THREE.TorusGeometry(0.115, 0.032, 10, 28), mats.jacket, spine, 0, 0.6, 0.035); rim.rotation.x = Math.PI / 2; rim.scale.set(1, 1.05, 0.9);
+    const hood = mesh(looseGeo(new THREE.SphereGeometry(0.16, 24, 16), 0.9), mats.jacket, spine, 0, 0.665, -0.075); hood.scale.set(1.02, 1.04, 0.95);
+    const cowl = mesh(looseGeo(new THREE.CylinderGeometry(0.14, 0.2, 0.16, 26, 1, true), 0.6), mats.jacket, spine, 0, 0.58, -0.04); cowl.scale.set(1.05, 1, 0.85);
+    const rim = mesh(looseGeo(new THREE.TorusGeometry(0.115, 0.032, 10, 28), 0.3), mats.jacket, spine, 0, 0.6, 0.035); rim.rotation.x = Math.PI / 2; rim.scale.set(1, 1.05, 0.9);
+    V.hood.push(hood, cowl, rim);
   }
   const neck = new THREE.Group(); neck.position.y = 0.6; spine.add(neck);
-  mesh(new THREE.CylinderGeometry(0.072, 0.07, 0.13, 18).translate(0, 0.05, 0.004), mats.jacket, neck).scale.set(1, 1, 1.12);   // collar
+  mesh(looseGeo(new THREE.CylinderGeometry(0.072, 0.07, 0.13, 18).translate(0, 0.05, 0.004), 0.1), mats.jacket, neck).scale.set(1, 1, 1.12);   // collar
   mesh(new THREE.SphereGeometry(0.1, 18, 14), mats.skin, neck, 0, 0.125, 0.015).scale.set(0.95, 1.08, 1);
-  for (const [x, z] of [[0, 0.02], [-0.045, -0.01], [0.045, -0.01], [0, -0.07]]) mesh(new THREE.BoxGeometry(0.018, 0.012, 0.05), mats.strap, neck, x, 0.262, z);   // helmet vents
-  const helmetMesh = mesh(new THREE.SphereGeometry(0.135, 26, 16, 0, Math.PI * 2, 0, 2.0), mats.helmet, neck, 0, 0.14, -0.005); helmetMesh.scale.set(1, 1, 1.1);
+  const hv = (k, m) => { m.castShadow = true; return vr(V.helmet, k, m); };
+  for (const [x, z] of [[0, 0.02], [-0.045, -0.01], [0.045, -0.01], [0, -0.07]]) hv('round', mesh(new THREE.BoxGeometry(0.018, 0.012, 0.05), mats.strap, neck, x, 0.262, z));   // helmet vents
+  hv('round', mesh(new THREE.SphereGeometry(0.135, 26, 16, 0, Math.PI * 2, 0, 2.0), mats.helmet, neck, 0, 0.14, -0.005)).scale.set(1, 1, 1.1);
+  // race helmet: longer shell, chin guard, tail fin
+  hv('race', mesh(new THREE.SphereGeometry(0.137, 28, 16, 0, Math.PI * 2, 0, 2.05), mats.helmet, neck, 0, 0.135, -0.03)).scale.set(1, 0.97, 1.22);
+  hv('race', mesh(new THREE.TorusGeometry(0.099, 0.017, 8, 22, Math.PI).rotateX(Math.PI / 2), mats.helmet, neck, 0, 0.05, 0.015));
+  hv('race', mesh(new THREE.BoxGeometry(0.012, 0.05, 0.1), mats.helmet, neck, 0, 0.245, -0.135)).rotation.x = 0.55;
+  for (const [x, z] of [[-0.04, 0.0], [0.04, 0.0]]) hv('race', mesh(new THREE.BoxGeometry(0.016, 0.012, 0.07), mats.strap, neck, x, 0.265, z));
+  // freestyle helmet: rounder and bigger, with ear pads and a stripe
+  hv('free', mesh(new THREE.SphereGeometry(0.141, 26, 16, 0, Math.PI * 2, 0, 1.95), mats.helmet, neck, 0, 0.14, -0.005)).scale.set(1.02, 1, 1.06);
+  for (const sd of [-1, 1]) hv('free', mesh(new THREE.CylinderGeometry(0.046, 0.046, 0.034, 14).rotateZ(Math.PI / 2), mats.strap, neck, 0.139 * sd, 0.105, -0.005));
+  hv('free', mesh(new THREE.BoxGeometry(0.02, 0.01, 0.2), mats.strap, neck, 0, 0.278, -0.005));
+  // snapback cap: dome and a flat brim
+  hv('cap', mesh(new THREE.SphereGeometry(0.118, 22, 14, 0, Math.PI * 2, 0, 1.75), mats.helmet, neck, 0, 0.16, -0.005)).scale.set(1, 1.05, 1.12);
+  hv('cap', mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.012, 22, 1, false, -1.0, 2.0), mats.helmet, neck, 0, 0.163, 0.055));
   mesh(new THREE.CylinderGeometry(0.133, 0.133, 0.068, 26, 1, true, -1.05, 2.1), mats.goggle, neck, 0, 0.128, 0.006).scale.set(1, 1, 1.12);
   mesh(new THREE.CylinderGeometry(0.134, 0.134, 0.034, 26, 1, true, 1.05, 4.18), mats.gstrap, neck, 0, 0.128, 0.006).scale.set(1, 1, 1.12);
   const arms = [1, -1].map(s => {
@@ -2039,18 +2154,18 @@ function makeRig() {
     mesh(new THREE.ConeGeometry(0.008, 0.05, 6).rotateX(Math.PI).translate(0, -1.17, 0), mats.buckle, pole);
     return { shoulder, elbow, hand, pole };
   });
-  return { root, yawG, roll, tumble, body, pelvis, legs, spine, neck, arms, mats, helmetMesh };
+  return { root, yawG, roll, tumble, body, pelvis, legs, spine, neck, arms, mats, V };
 }
 const rig = makeRig(); scene.add(rig.root);
 // skis (and poles) carried over the right shoulder when walking
 const carried = new THREE.Group(); carried.visible = false;
 {
-  const skiM = new THREE.MeshStandardMaterial({ map: skiTopTexture(), roughness: 0.32 }), edgeM = new THREE.MeshStandardMaterial({ color: '#141618', roughness: 0.45, metalness: 0.6 }), poleM = new THREE.MeshStandardMaterial({ color: '#c3c9d0', roughness: 0.28, metalness: 0.9 });
+  const skiM = new THREE.MeshStandardMaterial({ map: skiTex('classic'), roughness: 0.32 }), edgeM = new THREE.MeshStandardMaterial({ color: '#141618', roughness: 0.45, metalness: 0.6 }), poleM = new THREE.MeshStandardMaterial({ color: '#c3c9d0', roughness: 0.28, metalness: 0.9 });
   const sg = skiGeometry();
   for (const dx of [-0.045, 0.045]) { const s = new THREE.Mesh(sg, [skiM, edgeM]); s.position.set(dx, 0, 0); s.castShadow = true; carried.add(s); }
   for (const dx of [-0.03, 0.03]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.0095, 0.006, 1.18, 8), poleM); p.rotation.x = Math.PI / 2; p.position.set(dx, -0.04, -0.1); carried.add(p); }
   carried.position.set(-0.2, 0.56, -0.02); carried.rotation.set(-0.75, 0.12, Math.PI / 2 - 0.15);
-  rig.spine.add(carried);
+  rig.spine.add(carried); rig.skiMats = [rig.mats.skiTop, skiM];
 }
 const pose = { kL: .4, kR: .4, back: .05, lift: 0, pitch: .2, twist: 0, counter: 0, roll: 0, bodyYaw: 0, armF: [.4, .4], abd: [.25, .25], elbow: [.6, .6], poleBack: [.5, .5], splay: [0, 0], skiYaw: [0, 0], tumbleX: 0, tumbleZ: 0, seated: 0, swing: [0, 0], head: 0 };
 const poseVel = {}; for (const k in pose) poseVel[k] = Array.isArray(pose[k]) ? [0, 0] : 0;
@@ -2107,6 +2222,7 @@ addEventListener('keydown', e => {
     if (e.code === 'Minus' || e.code === 'NumpadSubtract') mapZoom(1 / 1.5);
     return;
   }
+  if (e.code === 'KeyO' && $('tele').style.display !== 'block') showMenu('mWard');
   if (e.code === 'KeyT') toggle('tele');
   if (e.code === 'KeyM') openMap();
   if (e.code === 'KeyC') camMode = (camMode + 1) % 3;
@@ -3484,63 +3600,82 @@ const EQUIP = {
 const EQ = () => EQUIP[settings.equip] || EQUIP.allmtn;
 for (const e of Object.values(EQUIP)) e.board = !!e.board;
 const LENS = { orange: '#ff7a1a', blue: '#2a6fd6', silver: '#c9d2da', gold: '#e0a800', green: '#2fb36d' };
-let boardMesh = null, beanie = null, flapU = { t: { value: 0 }, amp: { value: 0 } };
-function addFlap(m) { // jacket and trousers flutter in the wind at speed
+let boardMesh = null, beanie = null, flapU = { t: { value: 0 }, amp: { value: 0 }, wind: { value: new THREE.Vector3() }, lag: { value: new THREE.Vector3() } };
+function addFlap(m) { // loose cloth reacts: the wind streams it back, hard turns and bumps swing it, speed makes it flutter and billow
   m.onBeforeCompile = sh => {
-    sh.uniforms.uFT = flapU.t; sh.uniforms.uFA = flapU.amp;
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uFT; uniform float uFA;')
-      .replace('#include <begin_vertex>', `#include <begin_vertex>
-  float fw = sin(uFT * 31.0 + position.y * 45.0 + position.x * 23.0) * 0.6 + sin(uFT * 53.0 + position.z * 37.0 - position.y * 19.0) * 0.4;
-  transformed += objectNormal * fw * uFA * 0.007;`);
+    sh.uniforms.uFT = flapU.t; sh.uniforms.uFA = flapU.amp; sh.uniforms.uWind = flapU.wind; sh.uniforms.uLag = flapU.lag;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aLoose; uniform float uFT; uniform float uFA; uniform vec3 uWind; uniform vec3 uLag;')
+      .replace('#include <skinning_vertex>', `#include <skinning_vertex>
+  {
+    float lo = aLoose, wl = length(uWind), wm = 1.0 - exp(-wl / 11.0);
+    vec3 wd = wl > 0.01 ? uWind / wl : vec3(0.0);
+    float fw = sin(uFT * 31.0 + position.y * 45.0 + position.x * 23.0) * 0.6 + sin(uFT * 53.0 + position.z * 37.0 - position.y * 19.0) * 0.4;
+    vec3 dW = (-wd * wm * 0.1 + uLag) * lo;
+    transformed += (vec4(dW, 0.0) * modelMatrix).xyz + objectNormal * (fw * uFA * 0.016 + wm * 0.014) * lo;
+  }`);
   };
   m.needsUpdate = true;
 }
 function buildGearVisuals() {
   const M = rig.mats;
-  addFlap(M.jacket); addFlap(M.jacket2); addFlap(M.pants);
-  buildBody();
+  addFlap(M.jacket); addFlap(M.jacket2); addFlap(M.pants); addFlap(M.pants2);
+  setupBody();
   // snowboard: one deck under both feet, along the direction of travel
   const shape = new THREE.Shape(), L = 0.78, Wd = 0.13;
   shape.moveTo(-Wd, -L + 0.12); shape.quadraticCurveTo(-Wd, -L, 0, -L); shape.quadraticCurveTo(Wd, -L, Wd, -L + 0.12);
   shape.quadraticCurveTo(Wd - 0.015, 0, Wd, L - 0.12); shape.quadraticCurveTo(Wd, L, 0, L); shape.quadraticCurveTo(-Wd, L, -Wd, L - 0.12); shape.quadraticCurveTo(-Wd + 0.015, 0, -Wd, -L + 0.12);
   const bg = new THREE.ExtrudeGeometry(shape, { depth: 0.014, bevelEnabled: false, curveSegments: 8 }); bg.rotateX(Math.PI / 2); bg.translate(0, 0.014, 0);
   const bp = bg.attributes.position; for (let i = 0; i < bp.count; i++) { const z = bp.getZ(i); if (Math.abs(z) > 0.6) bp.setY(i, bp.getY(i) + (Math.abs(z) - 0.6) ** 2 * 1.6); } bg.computeVertexNormals();
-  const cv = document.createElement('canvas'); cv.width = 64; cv.height = 256; const c = cv.getContext('2d');
-  const gr = c.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#16181c'); gr.addColorStop(0.5, '#2a6fd6'); gr.addColorStop(1, '#16181c'); c.fillStyle = gr; c.fillRect(0, 0, 64, 256);
-  c.fillStyle = '#f2c230'; c.fillRect(0, 118, 64, 20); const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  const tex = skiTex(settings.skiDesign, true);
   boardMesh = new THREE.Group();
-  const deck = new THREE.Mesh(bg, [new THREE.MeshStandardMaterial({ map: tex, roughness: 0.35 }), new THREE.MeshStandardMaterial({ color: '#141618', roughness: 0.4, metalness: 0.5 })]);
+  const deck = new THREE.Mesh(bg, [rig.boardMat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.35 }), new THREE.MeshStandardMaterial({ color: '#141618', roughness: 0.4, metalness: 0.5 })]);
   deck.castShadow = true; boardMesh.add(deck);
   for (const z of [-0.24, 0.24]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.05, 0.13), new THREE.MeshStandardMaterial({ color: '#202327', roughness: 0.5 })); b.position.set(0, 0.04, z); b.castShadow = true; boardMesh.add(b); }
   boardMesh.visible = false; rig.root.add(boardMesh);
-  // knitted beanie with a bobble, worn instead of the helmet
-  beanie = new THREE.Group();
+  // knitted bobble hat, worn instead of a helmet (its parts hang straight off the head joint, so the ragdoll copies them too)
   const knit = new THREE.MeshStandardMaterial({ color: '#c8102e', roughness: 0.95 }); M.beanie = knit;
-  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.112, 18, 12, 0, Math.PI * 2, 0, 1.7), knit); cap.position.set(0, 0.15, 0.005); cap.scale.set(1, 1.05, 1.08);
-  const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.113, 0.115, 0.05, 18, 1, true), knit); cuff.position.set(0, 0.165, 0.005); cuff.scale.set(1, 1, 1.08);
-  const bob = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), new THREE.MeshStandardMaterial({ color: '#f4f4f4', roughness: 1 })); bob.position.set(0, 0.27, 0); bob.name = 'bobble';
-  for (const m of [cap, cuff, bob]) { m.castShadow = true; beanie.add(m); }
-  beanie.visible = false; rig.neck.add(beanie);
+  const bobM = new THREE.MeshStandardMaterial({ color: '#f4f4f4', roughness: 1 });
+  const bparts = [
+    new THREE.Mesh(new THREE.SphereGeometry(0.112, 18, 12, 0, Math.PI * 2, 0, 1.7), knit),
+    new THREE.Mesh(new THREE.CylinderGeometry(0.113, 0.115, 0.05, 18, 1, true), knit),
+    new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), bobM)];
+  bparts[0].position.set(0, 0.15, 0.005); bparts[0].scale.set(1, 1.05, 1.08);
+  bparts[1].position.set(0, 0.165, 0.005); bparts[1].scale.set(1, 1, 1.08);
+  bparts[2].position.set(0, 0.27, 0);
+  rig.V.helmet.beanie = bparts; for (const m of bparts) { m.castShadow = true; m.visible = false; rig.neck.add(m); }
   applyGear();
 }
-let lastEquip = null;
+let lastEquip = null, lastOutfit = '';
 function applyGear() {
   if (!rig.mats || !boardMesh) return;
   if (lastEquip && lastEquip !== settings.equip) flash(EQ().name + ': ' + EQ().desc, 4);
   lastEquip = settings.equip;
-  const M = rig.mats, e = EQ();
-  M.jacket.color.set(settings.jacket); M.jacket2.color.set(settings.jacket2); M.pants.color.set(settings.pants); M.helmet.color.set(settings.helmet);
-  M.goggle.color.set(LENS[settings.lens] || LENS.orange); if (M.beanie) M.beanie.color.set(settings.jacket);
-  const helmet = settings.head !== 'beanie'; rig.helmetMesh.visible = helmet; beanie.visible = !helmet;
-  M.skiTop.color.set(e.tint || '#ffffff');
+  const M = rig.mats, e = EQ(), st = settings;
+  M.jacket.color.set(st.jacket); M.jacket2.color.set(st.jacket2); M.pants.color.set(st.pants); M.pants2.color.set(st.pants2);
+  M.helmet.color.set(st.helmet); if (M.beanie) M.beanie.color.set(st.helmet);
+  M.goggle.color.set(LENS[st.lens] || LENS.orange); M.gstrap.color.set(st.strap);
+  M.boot.color.set(st.boot); M.accent.color.set(st.bootAccent); M.glove.color.set(st.glove); M.pole.color.set(st.poleCol);
+  const key = [st.jacketStyle, st.pantsStyle, st.helmetStyle, st.bootStyle, st.skiDesign].join('|');
+  if (key !== lastOutfit) { lastOutfit = key; applyOutfit(); }
   rig.legs.forEach(l => l.ski.scale.set(e.width || 1, 1, (e.len || 1.66) / 1.66));
   if (!e.board && S.skins === undefined) S.skins = false;
   if (!(settings.equip === 'touring')) S.skins = false;
 }
+function applyOutfit() { // show the chosen jacket, trousers, helmet, boots and top sheet
+  const st = settings, V = rig.V, jk = JACKETS[st.jacketStyle] ? st.jacketStyle : 'parka', pn = PANTS[st.pantsStyle] ? st.pantsStyle : 'baggy';
+  const hl = V.helmet[st.helmetStyle] ? st.helmetStyle : 'round', bt = V.boot[st.bootStyle] ? st.bootStyle : 'allmtn';
+  showSuit('jacket', jk); showSuit('pants', pn);
+  for (const k in V.boot) V.boot[k].forEach(m => m.visible = k === bt);
+  for (const k in V.helmet) V.helmet[k].forEach(m => m.visible = k === hl);
+  V.hood.forEach(m => m.visible = !!JACKETS[jk].hood); V.pockets.forEach(m => m.visible = !!PANTS[pn].pockets);
+  const top = skiTex(st.skiDesign); rig.mats.skiTop.map = top; rig.skiMats[1].map = top; rig.boardMat.map = skiTex(st.skiDesign, true);
+  for (const m of [rig.mats.skiTop, rig.skiMats[1], rig.boardMat]) m.needsUpdate = true;
+  if (RAG.vis && !RAG.active) { scene.remove(RAG.vis.grp); RAG.vis = null; }                  // the ragdoll copies the clothes the next time you fall
+}
 // ---------- ski touring: skins on, walk uphill on your skis ----------
 function toggleSkins() {
   if (S.mode !== 'ski' || S.onFoot) { flash('Put your skis on first (K)', 1.4); return; }
-  if (settings.equip !== 'touring') { flash('Skins need touring skis — choose them under Settings → Gear', 2.2); return; }
+  if (settings.equip !== 'touring') { flash('Skins need touring skis — choose them in the wardrobe (O)', 2.2); return; }
   if (!S.grounded || S.v.length() > 2) { flash('Stop first to put the skins on', 1.4); return; }
   S.skins = !S.skins; S.walkSpeed = 0; S.v.set(0, 0, 0); trackBreak();
   flash(S.skins ? 'Skins on — W to walk uphill (Shift: faster), G to take them off for the descent' : 'Skins off — ready to ski down', 2.4);
@@ -3622,29 +3757,80 @@ function lvsFound() {
   lvsStop(); flash(`Found in ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}${best ? ' — your best!' : ''} · in a real burial the first 15 minutes decide everything`, 4);
 }
 function camYawNow() { const d = new THREE.Vector3(); camera.getWorldDirection(d); return Math.atan2(d.x, d.z); }
+const _cw = new THREE.Vector3(), _ca = new THREE.Vector3(), CLOTH = { p: new THREE.Vector3(), q: new THREE.Vector3(), pv: new THREE.Vector3() };
 function updateGearFrame(dt) {
   flapU.t.value += dt;
-  const sp = S.mode === 'ski' && !S.onFoot && !S.skins ? S.v.length() : S.mode === 'lift' ? 2 : 0;
+  if (WARD.on && WARD.stage) WARD.stage.position.set(rig.root.position.x, rig.root.position.y - 0.18, rig.root.position.z);
+  const ward = WARD.on, moving = !window.__game.paused && (S.mode === 'ski' ? !S.onFoot && !S.skins : S.mode === 'crash');
+  _cw.set(0, 0, 0);
+  if (ward) _cw.set(Math.sin(S.yaw), 0, Math.cos(S.yaw)).multiplyScalar(WARD.wind + 1.2 + Math.sin(flapU.t.value * 0.8));   // the wardrobe shows a gentle breeze, or the speed you pick
+  else if (moving) _cw.copy(S.v);
+  const sp = _cw.length();
   flapU.amp.value += (clamp((sp - 6) / 22, 0, 1) - flapU.amp.value) * Math.min(1, dt * 3);
-  if (beanie && beanie.visible) { const b = beanie.getObjectByName('bobble'); b.position.x = Math.sin(flapU.t.value * 9) * 0.01 * flapU.amp.value; b.position.z = -0.02 * flapU.amp.value; }
+  flapU.wind.value.lerp(_cw, 1 - Math.exp(-dt * 5));
+  // inertia: the cloth hangs back when you speed up, swings out in turns and bounces on landings (a damped spring on the acceleration)
+  if (dt > 0) {
+    if (ward) _ca.set(Math.cos(S.yaw), 0, -Math.sin(S.yaw)).multiplyScalar(Math.sin(flapU.t.value * 2.4) * WARD.wind * 0.35);
+    else if (moving) _ca.copy(S.v).sub(CLOTH.pv).divideScalar(dt); else _ca.set(0, 0, 0);
+    CLOTH.pv.copy(S.v); if (_ca.lengthSq() > 1600) _ca.setLength(40);
+    const n = Math.ceil(dt / 0.01), h = dt / n;
+    for (let i = 0; i < n; i++) { CLOTH.q.addScaledVector(CLOTH.p, -150 * h).addScaledVector(CLOTH.q, -11 * h).addScaledVector(_ca, -0.75 * h); CLOTH.p.addScaledVector(CLOTH.q, h); }
+    if (CLOTH.p.length() > 0.1) CLOTH.p.setLength(0.1);
+    flapU.lag.value.copy(CLOTH.p);
+  }
+  const bob = rig.V.helmet.beanie && rig.V.helmet.beanie[2];
+  if (bob && bob.visible) { bob.position.x = Math.sin(flapU.t.value * 9) * 0.01 * flapU.amp.value; bob.position.z = -0.02 * flapU.amp.value; }
   updateLVS(dt);
 }
 
-// ================= skier body: one smooth, skinned ski suit instead of separate shapes =================
-// The suit is generated around the rig in its rest pose (legs and arms hanging straight) as continuous tubes with
-// anatomical cross-sections, and skinned to bones that copy the rig joints every frame — or the ragdoll segments
-// after a fall — so knees, hips, elbows and shoulders bend smoothly.
-const BODY = { mesh: null, bones: [], rigD: null };
-const lerpTab = (tab, y, col) => { // piecewise-linear lookup in a table sorted by descending y
-  if (y >= tab[0][0]) return tab[0][col]; if (y <= tab.at(-1)[0]) return tab.at(-1)[col];
-  for (let i = 1; i < tab.length; i++) if (y >= tab[i][0]) { const a = tab[i - 1], b = tab[i], t = (y - b[0]) / (a[0] - b[0]); return b[col] + (a[col] - b[col]) * t; }
-  return tab.at(-1)[col];
+// jackets and trousers: loose, baggy cuts. Each row is [height, half-width, half-depth, forward shift, material, looseness]; looseness (0 = tight to the
+// body, 1 = hangs free) is what the wind, the speed and the turns push around in the cloth shader.
+const JK = 0, TR = 1;
+const JACKETS = {
+  parka: { name: 'Baggy parka', desc: 'Oversized hooded jacket with a dark chest band', hood: true, sq: 2.7, wr: 0.02,
+    rows: [[0.67, .09, .09, 0, JK, 0], [0.62, .10, .10, 0, JK, 0], [0.57, .15, .115, 0, JK, 0], [0.52, .225, .15, .008, JK, 0], [0.47, .255, .17, .014, TR, .1], [0.40, .26, .178, .018, TR, .2], [0.32, .262, .18, .018, JK, .35],
+      [0.22, .264, .18, .016, JK, .55], [0.12, .264, .18, .012, JK, .75], [0.04, .27, .186, .008, TR, .95], [-0.04, .268, .185, .004, TR, 1], [-0.075, .255, .176, 0, TR, 1]],
+    arm: { k: 1.2, cuff: .068, band: [2, 3, 4], loose: .8 } },
+  puffer: { name: 'Puffer jacket', desc: 'Big quilted down jacket with a funnel collar', hood: false, sq: 2.35, wr: 0,
+    rows: [[0.70, .125, .125, 0, JK, 0], [0.645, .135, .135, 0, JK, 0], [0.59, .18, .14, 0, JK, 0], [0.53, .245, .165, .01, JK, 0], [0.47, .292, .19, .02, JK, .05], [0.425, .272, .18, .02, JK, .1], [0.375, .296, .192, .02, JK, .15],
+      [0.33, .276, .182, .02, JK, .2], [0.28, .298, .194, .02, JK, .3], [0.235, .278, .184, .018, JK, .4], [0.185, .298, .194, .016, JK, .5], [0.14, .278, .184, .014, JK, .6], [0.09, .296, .192, .01, JK, .7],
+      [0.045, .276, .182, .006, JK, .85], [0.0, .29, .188, .002, TR, 1], [-0.04, .282, .184, 0, TR, 1], [-0.065, .262, .172, 0, TR, 1]],
+    arm: { k: 1.38, cuff: .072, bump: .08, band: [], loose: .7 } },
+  race: { name: 'Race suit', desc: 'Skin-tight and aerodynamic: hardly any flapping', hood: false, sq: 2.3, wr: 0,
+    rows: [[0.67, .085, .085, 0, JK, 0], [0.62, .095, .095, 0, JK, 0], [0.57, .14, .11, 0, JK, 0], [0.52, .205, .14, .006, JK, 0], [0.47, .218, .15, .01, TR, 0], [0.40, .214, .152, .012, TR, 0], [0.32, .202, .146, .012, JK, .05],
+      [0.22, .19, .14, .01, JK, .05], [0.12, .19, .142, .006, JK, .05], [0.04, .2, .146, .004, TR, .1], [-0.04, .206, .148, 0, TR, .1], [-0.07, .2, .145, 0, TR, .1]],
+    arm: { k: .93, cuff: .058, band: [1, 2, 3, 4, 5], loose: .1 } },
+  retro: { name: 'Retro anorak', desc: '80s colour blocks and a stand-up collar', hood: false, sq: 2.8, wr: 0.015,
+    rows: [[0.68, .105, .105, 0, TR, 0], [0.62, .115, .115, 0, JK, 0], [0.57, .16, .12, 0, JK, 0], [0.52, .23, .152, .008, JK, 0], [0.46, .252, .168, .012, JK, .1], [0.38, .256, .172, .016, TR, .2], [0.28, .258, .174, .016, TR, .3],
+      [0.18, .258, .174, .014, TR, .45], [0.10, .26, .176, .01, JK, .6], [0.02, .262, .178, .006, JK, .8], [-0.05, .26, .176, .002, TR, 1], [-0.08, .25, .17, 0, TR, 1]],
+    arm: { k: 1.12, cuff: .07, band: [3, 4, 5, 6], loose: .7 } },
 };
+const PANTS = {
+  baggy: { name: 'Baggy trousers', desc: 'Wide straight cut that bunches over the boots', sq: 2.3, wr: 0.022, hk: 1.08, pockets: false,
+    rows: [[0.07, .126, .13, 0, .0], [0, .128, .132, 0, 0], [-0.1, .131, .134, .002, .12], [-0.22, .134, .137, .004, .28], [-0.34, .136, .14, .006, .4], [-0.42, .137, .141, .008, .5], [-0.46, .137, .141, .009, .5],
+      [-0.52, .138, .142, .004, .6], [-0.6, .141, .145, -.01, .72], [-0.68, .145, .15, -.006, .85], [-0.72, .15, .156, .004, .95], [-0.765, .154, .16, .006, 1]] },
+  cargo: { name: 'Cargo trousers', desc: 'Even wider, with big thigh pockets', sq: 2.3, wr: 0.03, hk: 1.12, pockets: true,
+    rows: [[0.07, .138, .142, 0, 0], [0, .14, .144, 0, 0], [-0.1, .144, .147, .002, .12], [-0.22, .148, .151, .004, .3], [-0.34, .15, .154, .006, .42], [-0.42, .151, .155, .008, .52], [-0.46, .151, .155, .009, .52],
+      [-0.52, .152, .156, .004, .62], [-0.6, .155, .16, -.01, .75], [-0.68, .16, .165, -.006, .88], [-0.72, .166, .172, .004, .97], [-0.765, .17, .176, .006, 1]] },
+  slim: { name: 'Race trousers', desc: 'Close fitting, with room for the boot cuff', sq: 2.3, wr: 0, hk: .95, pockets: false,
+    rows: [[0.07, .118, .122, 0, 0], [0, .112, .116, 0, 0], [-0.1, .109, .112, .002, .05], [-0.22, .105, .109, .004, .05], [-0.34, .101, .106, .006, .05], [-0.42, .099, .104, .008, .05], [-0.46, .099, .104, .009, .05],
+      [-0.52, .099, .105, .004, .08], [-0.6, .1, .108, -.01, .1], [-0.68, .101, .109, -.006, .1], [-0.74, .106, .114, .004, .15], [-0.78, .11, .118, .006, .2]] },
+  jogger: { name: 'Cuffed joggers', desc: 'Relaxed on top, tapered to a trim-coloured cuff', sq: 2.3, wr: 0.02, hk: 1.04, pockets: false,
+    rows: [[0.07, .122, .126, 0, 0], [0, .124, .128, 0, 0], [-0.1, .127, .13, .002, .12], [-0.22, .13, .133, .004, .3], [-0.34, .125, .13, .006, .4], [-0.42, .118, .124, .008, .45], [-0.46, .116, .122, .009, .45],
+      [-0.52, .11, .117, .004, .45], [-0.6, .104, .111, -.01, .4], [-0.68, .1, .107, -.006, .3], [-0.74, .102, .11, .004, .2, 1], [-0.78, .108, .116, .006, .2, 1], [-0.855, .107, .115, .006, .1, 1]] },
+};
+const ARM_Y = [0.08, 0.02, -0.03, -0.10, -0.17, -0.25, -0.33, -0.42, -0.5, -0.535, -0.58], ARM_R = [0.082, 0.09, 0.085, 0.081, 0.078, 0.074, 0.071, 0.07, 0.062, 0.064, 0.064];
+
+// ================= skier body: smooth, skinned clothes instead of separate shapes =================
+// The clothes are generated around the rig in its rest pose (legs and arms hanging straight) as continuous tubes with
+// rounded-box cross-sections, and skinned to bones that copy the rig joints every frame — or the ragdoll segments
+// after a fall — so knees, hips, elbows and shoulders bend smoothly. A jacket and a pair of trousers are built the first
+// time the wardrobe asks for them; the cloth shader then lets the loose parts react to speed, wind and turns.
+const BODY = { bones: [], rigD: null, skel: null, rest: null, suit: null, cur: {} };
 function rigDrivers() { const L = rig.legs, A = rig.arms; return [rig.pelvis, rig.spine, rig.neck, L[0].hip, L[0].knee, L[0].ankle, L[1].hip, L[1].knee, L[1].ankle, A[0].shoulder, A[0].elbow, A[0].hand, A[1].shoulder, A[1].elbow, A[1].hand]; }
 function ragDrivers(V) { return [V.hips, V.torso, V.head, V.thigh[0], V.shin[0], V.boot[0], V.thigh[1], V.shin[1], V.boot[1], V.upper[0], V.fore[0], V.hand[0], V.upper[1], V.fore[1], V.hand[1]]; }
-function buildBody() {
+function setupBody() {
   const B = { pelvis: 0, spine: 1, neck: 2, hip: [3, 6], knee: [4, 7], ankle: [5, 8], sh: [9, 12], el: [10, 13], ha: [11, 14] };
-  // rest pose
   const save = [];
   rig.root.traverse(o => { if (o.isGroup || o.isObject3D) save.push([o, o.position.clone(), o.quaternion.clone()]); });
   rig.root.position.set(0, 0, 0); rig.root.quaternion.identity();
@@ -3652,78 +3838,87 @@ function buildBody() {
   rig.pelvis.position.set(0, 0.95, 0);
   rig.root.updateMatrixWorld(true);
   const D = rigDrivers(), wp = o => new THREE.Vector3().setFromMatrixPosition(o.matrixWorld);
-  const hipY = wp(D[3]).y, kneeY = wp(D[4]).y, ankY = wp(D[5]).y, spY = wp(D[1]).y, neckY = wp(D[2]).y, shY = wp(D[9]).y, elY = wp(D[10]).y, haY = wp(D[11]).y, shX = Math.abs(wp(D[9]).x), legX = Math.abs(wp(D[3]).x);
-  // bones copy the drivers' world transforms
+  BODY.rest = { B, hipY: wp(D[3]).y, kneeY: wp(D[4]).y, ankY: wp(D[5]).y, spY: wp(D[1]).y, neckY: wp(D[2]).y, shY: wp(D[9]).y, elY: wp(D[10]).y, haY: wp(D[11]).y, shX: Math.abs(wp(D[9]).x), legX: Math.abs(wp(D[3]).x) };
   const boneRoot = new THREE.Group(); scene.add(boneRoot);
   BODY.bones = D.map(d => { const b = new THREE.Bone(); d.matrixWorld.decompose(b.position, b.quaternion, b.scale); boneRoot.add(b); return b; });
   boneRoot.updateMatrixWorld(true);
-  // geometry
-  const P = [], SI = [], SW = [], idx = [[], [], []], SEG = 28;
-  const tube = (rings) => { // rings: [{ x, y, z, rx, rz, mat, w: [[bone, weight]...] }] from top to bottom
+  BODY.skel = new THREE.Skeleton(BODY.bones); BODY.rigD = D; BODY.suit = { jacket: {}, pants: {} }; BODY.cur = {};
+  for (const [o, p, q] of save) { o.position.copy(p); o.quaternion.copy(q); }
+  rig.root.updateMatrixWorld(true);
+}
+function suitMesh(mats, build) {
+  const P = [], SI = [], SW = [], LO = [], idx = mats.map(() => []), SEG = 28;
+  const tube = rings => { // rings from top to bottom: { x, y, z, rx, rz, mat, sq, wr, lo, w: [[bone, weight]...] }
     const base = P.length / 3;
     for (const r of rings) {
       const ws = r.w.filter(([, w]) => w > 0.001).sort((a, b) => b[1] - a[1]).slice(0, 4); const tot = ws.reduce((s, [, w]) => s + w, 0) || 1;
       for (let k = 0; k < SEG; k++) {
-        const a = k / SEG * Math.PI * 2, sn = Math.sin(a), cs = Math.cos(a), e = 2 / (r.sq || 2); P.push(r.x + Math.sign(sn) * Math.pow(Math.abs(sn), e) * r.rx, r.y, r.z + Math.sign(cs) * Math.pow(Math.abs(cs), e) * r.rz);
+        const a = k / SEG * Math.PI * 2, sn = Math.sin(a), cs = Math.cos(a), e = 2 / (r.sq || 2), wk = 1 + (r.wr || 0) * Math.sin(r.y * 55 + a * 3);   // wk: creases in the cloth
+        P.push(r.x + Math.sign(sn) * Math.pow(Math.abs(sn), e) * r.rx * wk, r.y, r.z + Math.sign(cs) * Math.pow(Math.abs(cs), e) * r.rz * wk); LO.push(r.lo || 0);
         for (let j = 0; j < 4; j++) { SI.push(ws[j] ? ws[j][0] : 0); SW.push(ws[j] ? ws[j][1] / tot : 0); }
       }
     }
     for (let i = 0; i < rings.length - 1; i++) for (let k = 0; k < SEG; k++) {
       const a = base + i * SEG + k, b = base + i * SEG + (k + 1) % SEG, c = base + (i + 1) * SEG + k, d = base + (i + 1) * SEG + (k + 1) % SEG;
-      idx[rings[i].mat].push(a, c, b, b, c, d);
+      idx[rings[i].mat || 0].push(a, c, b, b, c, d);
     }
   };
-  const JK = 0, TR = 1, PA = 2;                      // materials: jacket, trim, trousers
-  // trunk: hips, jacket hem flaring over the trousers, waist, chest, shoulders, high collar
-  const T = [ // y (relative to the spine joint), rx, rz, forward shift, material
-    [0.67, 0.09, 0.09, 0, JK], [0.62, 0.10, 0.10, 0, JK], [0.57, 0.15, 0.115, 0, JK], [0.52, 0.222, 0.145, 0.008, JK], [0.47, 0.238, 0.158, 0.014, TR],
-    [0.40, 0.236, 0.162, 0.018, TR], [0.32, 0.23, 0.16, 0.018, JK], [0.22, 0.225, 0.156, 0.014, JK], [0.12, 0.22, 0.152, 0.008, JK], [0.06, 0.218, 0.15, 0.004, TR],
-    [0.015, 0.214, 0.148, 0, TR], [-0.015, 0.2, 0.14, -0.008, PA], [-0.06, 0.18, 0.13, -0.012, PA], [-0.11, 0.165, 0.122, -0.012, PA], [-0.15, 0.125, 0.098, -0.01, PA]];
-  tube(T.map(([dy, rx, rz, fz, mat]) => {
-    const y = spY + dy, wsp = sstep(spY - 0.01, spY + 0.15, y), wn = sstep(neckY - 0.03, neckY + 0.07, y) * 0.6;
-    return { x: 0, y, z: fz, rx, rz, mat, sq: 2.7, w: [[B.pelvis, 1 - wsp], [B.spine, wsp * (1 - wn)], [B.neck, wsp * wn]] };
-  }));
-  // legs: baggy ski trousers from the hip to over the boot cuff
-  const LG = [ // y (relative to the hip joint), rx, rz, forward shift
-    [0.07, 0.118, 0.122, 0], [0, 0.112, 0.116, 0], [-0.1, 0.109, 0.112, 0.002], [-0.22, 0.105, 0.109, 0.004], [-0.34, 0.101, 0.106, 0.006], [-0.42, 0.099, 0.104, 0.008],
-    [-0.46, 0.099, 0.104, 0.009], [-0.52, 0.099, 0.105, 0.004], [-0.6, 0.1, 0.108, -0.01], [-0.68, 0.101, 0.109, -0.006], [-0.74, 0.108, 0.116, 0.004], [-0.79, 0.113, 0.12, 0.006], [-0.82, 0.113, 0.12, 0.006]];
-  for (const i of [0, 1]) {
-    const sx = i === 0 ? legX : -legX;
-    tube(LG.map(([dy, rx, rz, fz]) => {
-      const y = hipY + dy, wp_ = sstep(hipY - 0.02, hipY + 0.08, y) * 0.5, wk = 1 - sstep(kneeY - 0.06, kneeY + 0.06, y), wa = 1 - sstep(ankY + 0.1, ankY + 0.22, y);
-      return { x: sx, y, z: fz, rx, rz, mat: PA, sq: 2.3, w: [[B.pelvis, wp_], [B.hip[i], (1 - wp_) * (1 - wk)], [B.knee[i], wk * (1 - wa)], [B.ankle[i], wa]] };
-    }));
-  }
-  // arms: sleeves from inside the shoulder to the cuff (the glove's gauntlet goes over it)
-  const AR = [ // y (relative to the shoulder joint), rx, rz, material
-    [0.08, 0.082, 0.086, JK], [0.02, 0.09, 0.094, JK], [-0.03, 0.085, 0.089, TR], [-0.10, 0.081, 0.085, TR], [-0.17, 0.078, 0.082, JK], [-0.25, 0.074, 0.078, JK],
-    [-0.33, 0.071, 0.075, JK], [-0.42, 0.07, 0.074, JK], [-0.5, 0.062, 0.065, JK], [-0.535, 0.064, 0.067, TR], [-0.58, 0.064, 0.067, TR]];
-  for (const i of [0, 1]) {
-    const s = i === 0 ? 1 : -1;
-    tube(AR.map(([dy, rx, rz, mat]) => {
-      const y = shY + dy, inward = Math.max(0, dy + 0.02) * 0.9, wsp = sstep(shY - 0.02, shY + 0.08, y) * 0.6, we = 1 - sstep(elY - 0.06, elY + 0.06, y), wh = 1 - sstep(haY + 0.0, haY + 0.08, y);
-      return { x: s * (shX - inward), y, z: 0, rx, rz, mat, sq: 2.2, w: [[B.spine, wsp], [B.sh[i], (1 - wsp) * (1 - we)], [B.el[i], we * (1 - wh)], [B.ha[i], wh]] };
-    }));
-  }
+  build(tube);
   const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); geo.setAttribute('aLoose', new THREE.Float32BufferAttribute(LO, 1));
   geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(SI, 4)); geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(SW, 4));
   const all = []; idx.forEach((l, m) => { geo.addGroup(all.length, l.length, m); all.push(...l); }); geo.setIndex(all);
   geo.computeVertexNormals();
-  const M = rig.mats;
-  const mesh = new THREE.SkinnedMesh(geo, [M.jacket, M.jacket2, M.pants]);
-  mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false;
-  scene.add(mesh); mesh.updateMatrixWorld(true);
-  mesh.bind(new THREE.Skeleton(BODY.bones));
-  BODY.mesh = mesh; BODY.rigD = D;
-  for (const [o, p, q] of save) { o.position.copy(p); o.quaternion.copy(q); }
-  rig.root.updateMatrixWorld(true);
+  const mesh = new THREE.SkinnedMesh(geo, mats);
+  mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false; mesh.visible = false;
+  scene.add(mesh); mesh.updateMatrixWorld(true); mesh.bind(BODY.skel, new THREE.Matrix4());   // an explicit bind matrix: otherwise three recomputes the shared skeleton from the current pose
+  return mesh;
+}
+function makeJacket(style) {
+  const J = JACKETS[style], R = BODY.rest, B = R.B, M = rig.mats, A = J.arm;
+  return suitMesh([M.jacket, M.jacket2], tube => {
+    tube(J.rows.map(([dy, rx, rz, fz, mat, lo]) => {
+      const y = R.spY + dy, wsp = sstep(R.spY - 0.01, R.spY + 0.15, y), wn = sstep(R.neckY - 0.03, R.neckY + 0.07, y) * 0.6;
+      return { x: 0, y, z: fz, rx, rz, mat, lo, sq: J.sq, wr: J.wr, w: [[B.pelvis, 1 - wsp], [B.spine, wsp * (1 - wn)], [B.neck, wsp * wn]] };
+    }));
+    for (const i of [0, 1]) {
+      const s = i === 0 ? 1 : -1;
+      tube(ARM_Y.map((dy, n) => {
+        const y = R.shY + dy, inward = Math.max(0, dy + 0.02) * 0.9, wsp = sstep(R.shY - 0.02, R.shY + 0.08, y) * 0.6, we = 1 - sstep(R.elY - 0.06, R.elY + 0.06, y), wh = 1 - sstep(R.haY, R.haY + 0.08, y);
+        let rx = n <= 7 ? ARM_R[n] * A.k : n === 8 ? (ARM_R[n] * A.k + A.cuff) / 2 : A.cuff;
+        if (A.bump && n >= 3 && n <= 7) rx *= 1 + (n % 2 ? A.bump : -A.bump * 0.5);
+        return { x: s * (R.shX - inward), y, z: 0, rx, rz: rx + 0.004, mat: A.band.includes(n) || n >= 9 ? 1 : 0, lo: A.loose * sstep(0.05, 0.5, -dy), sq: 2.2, wr: J.wr, w: [[B.spine, wsp], [B.sh[i], (1 - wsp) * (1 - we)], [B.el[i], we * (1 - wh)], [B.ha[i], wh]] };
+      }));
+    }
+  });
+}
+function makePants(style) {
+  const P = PANTS[style], R = BODY.rest, B = R.B, M = rig.mats;
+  return suitMesh([M.pants, M.pants2], tube => {
+    // the hips, under the jacket
+    tube([[0.05, .19, .135, -.004], [0, .2, .14, -.006], [-0.06, .195, .138, -.01], [-0.11, .177, .128, -.012], [-0.15, .125, .098, -.01]].map(([dy, rx, rz, fz]) => {
+      const y = R.spY + dy, wsp = sstep(R.spY - 0.01, R.spY + 0.15, y), wn = sstep(R.neckY - 0.03, R.neckY + 0.07, y) * 0.6;
+      return { x: 0, y, z: fz, rx: rx * P.hk, rz: rz * P.hk, mat: 0, sq: 2.5, w: [[B.pelvis, 1 - wsp], [B.spine, wsp * (1 - wn)], [B.neck, wsp * wn]] };
+    }));
+    for (const i of [0, 1]) {
+      const sx = i === 0 ? R.legX : -R.legX;
+      tube(P.rows.map(([dy, rx, rz, fz, lo, mat]) => {
+        const y = R.hipY + dy, wp_ = sstep(R.hipY - 0.02, R.hipY + 0.08, y) * 0.5, wk = 1 - sstep(R.kneeY - 0.06, R.kneeY + 0.06, y), wa = 1 - sstep(R.ankY + 0.1, R.ankY + 0.22, y);
+        return { x: sx, y, z: fz, rx, rz, mat: mat || 0, lo, sq: P.sq, wr: P.wr, w: [[B.pelvis, wp_], [B.hip[i], (1 - wp_) * (1 - wk)], [B.knee[i], wk * (1 - wa)], [B.ankle[i], wa]] };
+      }));
+    }
+  });
+}
+function showSuit(kind, style) {
+  const set = BODY.suit[kind]; if (!set[style]) set[style] = (kind === 'jacket' ? makeJacket : makePants)(style);
+  BODY.cur[kind] = set[style];
 }
 function syncBody() { // bones follow the rig, or the ragdoll segments while you're down
-  if (!BODY.mesh) return;
+  if (!BODY.suit) return;
   const rag = RAG.active && RAG.vis, D = rag ? (RAG.vis.drivers || (RAG.vis.drivers = ragDrivers(RAG.vis))) : BODY.rigD;
   for (let i = 0; i < D.length; i++) { D[i].updateWorldMatrix(true, false); D[i].matrixWorld.decompose(BODY.bones[i].position, BODY.bones[i].quaternion, BODY.bones[i].scale); }
-  BODY.mesh.visible = rag ? true : rig.root.visible;
+  const vis = rag ? true : rig.root.visible;
+  for (const kind in BODY.suit) for (const k in BODY.suit[kind]) BODY.suit[kind][k].visible = vis && BODY.suit[kind][k] === BODY.cur[kind];
 }
 
 // ================= quality presets + FPS counter =================
@@ -4160,7 +4355,7 @@ function animate(dt) {
     const ty = S.p.y + (S.onFoot ? 0.04 : 0.1) - (S.sink || 0) * 0.95;                  // sunk into the powder
     const jump = Math.abs(R.position.x - S.p.x) + Math.abs(R.position.z - S.p.z) > 5;
     R.position.set(S.p.x, jump || !S.grounded ? ty : R.position.y + (ty - R.position.y) * Math.min(1, dt * 25), S.p.z);
-    n = S.grounded ? (S.onFoot ? _up : normalAt(S.p.x, S.p.z)) : _up;
+    n = S.grounded && !WARD.on ? (S.onFoot ? _up : normalAt(S.p.x, S.p.z)) : _up;                // in the wardrobe he stands upright on a little stage
   }
   const f = new THREE.Vector3(Math.sin(S.yaw), 0, Math.cos(S.yaw)); f.addScaledVector(n, -f.dot(n)).normalize();
   const r = new THREE.Vector3().crossVectors(n, f).normalize();
@@ -4273,6 +4468,7 @@ function updateTracks() {
 // ================= camera =================
 // Slope-aware chase camera: it sits up the hill behind the skier and aims down the fall line, so steepness is
 // visible; at speed it tightens, widens its field of view and picks up vibration from the snow.
+const WARD = { on: false, tab: 'outfits', wind: 0, saved: null, fy: 1, fyT: 1, px: 500 };   // the wardrobe: the camera circles the skier while the menu is open
 let camMode = 0, orbitYaw = 0, orbitPitch = 0.26, camDist = 6.5, dragging = false, lastMX = 0, lastMY = 0;
 const camDir = new THREE.Vector3(0, 0, 1), camPos = new THREE.Vector3(), camTarget = new THREE.Vector3(), camLook = new THREE.Vector3();
 $('gl').addEventListener('pointerdown', e => { dragging = true; lastMX = e.clientX; lastMY = e.clientY; });
@@ -4280,7 +4476,7 @@ addEventListener('pointerup', () => dragging = false);
 addEventListener('pointermove', e => { if (!dragging) return; const k = settings.sens; orbitYaw -= (e.clientX - lastMX) * 0.005 * k; orbitPitch = clamp(orbitPitch + (e.clientY - lastMY) * 0.004 * k, -0.2, 1.3); lastMX = e.clientX; lastMY = e.clientY; });
 let camDistT = camDist;
 const ZOOM_MIN = 2.5, ZOOM_MAX = 150;
-$('gl').addEventListener('wheel', e => { camDistT = clamp(camDistT * (1 + Math.sign(e.deltaY) * 0.12), ZOOM_MIN, ZOOM_MAX); }, { passive: true });
+$('gl').addEventListener('wheel', e => { camDistT = clamp(camDistT * (1 + Math.sign(e.deltaY) * 0.12), WARD.on ? 0.9 : ZOOM_MIN, ZOOM_MAX); }, { passive: true });
 addEventListener('keydown', e => { if (e.code === 'PageUp' || e.code === 'PageDown') e.preventDefault(); });
 const _cv1 = new THREE.Vector3(), _cv2 = new THREE.Vector3();
 let shakeT = 0;
@@ -4288,12 +4484,13 @@ function updateCamera(dt) {
   if (keys.PageUp) camDistT = clamp(camDistT * Math.exp(-dt * 1.6), ZOOM_MIN, ZOOM_MAX);
   if (keys.PageDown) camDistT = clamp(camDistT * Math.exp(dt * 1.6), ZOOM_MIN, ZOOM_MAX);
   camDist += (camDistT - camDist) * Math.min(1, dt * 8);
-  const spd = S.mode === 'lift' ? 0 : S.v.length(), menuOpen = isMenuOpen();
+  const spd = S.mode === 'lift' || WARD.on ? 0 : S.v.length(), menuOpen = isMenuOpen();
   const hv = Math.hypot(S.v.x, S.v.z);
   const want = hv > 2.5 && S.mode !== 'crash' && !S.hockey ? _cv1.set(S.v.x, 0, S.v.z).normalize() : S.hockey ? camDir : _cv1.set(Math.sin(S.yaw), 0, Math.cos(S.yaw));
   camDir.lerp(want, 1 - Math.exp(-dt * (S.hockey ? 0.6 : 2.0))).normalize();
-  if (menuOpen) orbitYaw += dt * 0.08; else if (!dragging) orbitYaw *= Math.exp(-dt * 0.4);
+  if (WARD.on) { if (!dragging && WARD.spin !== false) orbitYaw += dt * 0.35; WARD.fy += (WARD.fyT - WARD.fy) * Math.min(1, dt * 5); } else if (menuOpen) orbitYaw += dt * 0.08; else if (!dragging) orbitYaw *= Math.exp(-dt * 0.4);
   const rawT = _cv2.copy(rig.root.position); rawT.y += 1.25;
+  if (WARD.on) { (WARD.bone === 'neck' ? rig.neck : WARD.bone === 'ankle' ? rig.legs[0].ankle : rig.pelvis).getWorldPosition(rawT); rawT.y += WARD.fy; }   // look at the body part being changed
   if (camTarget.distanceToSquared(rawT) > 400) camTarget.copy(rawT); else camTarget.lerp(rawT, 1 - Math.exp(-dt * 14));
   const target = camTarget;
   const extra = S.mode === 'lift' && !S.lift.spec.drag ? 6 : 0;
@@ -4307,7 +4504,7 @@ function updateCamera(dt) {
   let cy = target.y + d * Math.sin(pitch) + rise + (camMode === 1 ? 0.35 : 0);
   if (camMode === 1 || camPos.distanceToSquared(_cv1.set(cx, cy, cz)) > 10000) camPos.set(cx, cy, cz);
   else { const k = 1 - Math.exp(-dt * (5 + spd * 0.12)); camPos.x += (cx - camPos.x) * k; camPos.y += (cy - camPos.y) * k; camPos.z += (cz - camPos.z) * k; }
-  const gy = hAt(camPos.x, camPos.z) + 1.0; if (camPos.y < gy) camPos.y += (gy - camPos.y) * Math.min(1, dt * 12 + 0.2);
+  const gy = hAt(camPos.x, camPos.z) + (WARD.on ? 0.3 : 1.0); if (camPos.y < gy) camPos.y += (gy - camPos.y) * Math.min(1, dt * 12 + 0.2);
   camera.position.copy(camPos);
   // look slightly ahead along the (3-D) travel direction, so the fall line opens up in front of you
   const look = _cv1.copy(target);
@@ -4323,7 +4520,10 @@ function updateCamera(dt) {
     camera.position.y += (Math.sin(shakeT * 43 + 1) + Math.sin(shakeT * 71) * 0.5) * a;
     camera.position.z += Math.sin(shakeT * 53 + 2) * a * 0.6;
   }
-  camera.lookAt(camLook);
+  if (WARD.on) { // the skier stands to the right of the wardrobe panel
+    const fx = camLook.x - camPos.x, fz = camLook.z - camPos.z, fl = Math.hypot(fx, fz) || 1; _cv2.set(fz / fl, 0, -fx / fl).multiplyScalar(d * Math.tan(camera.fov * Math.PI / 360) * camera.aspect * clamp(WARD.px / innerWidth, 0, 0.7));
+    camera.position.add(_cv2); camera.lookAt(_cv1.copy(camLook).add(_cv2));
+  } else camera.lookAt(camLook);
   const fov = settings.fov + (settings.speedfx ? clamp((spd * 3.6 - 30) * 0.16, 0, 20) : 0);
   if (Math.abs(camera.fov - fov) > 0.05) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 3); camera.updateProjectionMatrix(); }
 }
@@ -4689,10 +4889,13 @@ function saveTick(dt) {
 addEventListener('beforeunload', writeSave);
 
 // ---------- settings (saved in this browser) ----------
-const SETTINGS_DEFAULT = { quality: 'high', fps: false, equip: 'allmtn', look: 2, jacket: '#1e7b79', jacket2: '#0f1a30', pants: '#141c33', helmet: '#0d0d0f', head: 'helmet', lens: 'silver', graphics: 'standard', timeSpeed: 'x20', weather: 'auto', res: 'auto', shadows: 'high', view: 'medium', trees: 'high', fov: 62, shake: true, speedfx: true, snow: true, volume: 0.6, units: 'kmh', hud: true, minimap: true, labels: true, sens: 1 };
+const SETTINGS_DEFAULT = { quality: 'high', fps: false, equip: 'allmtn', look: 3, jacket: '#1e7b79', jacket2: '#0f1a30', pants: '#141c33', pants2: '#0f1a30', helmet: '#0d0d0f', jacketStyle: 'parka', pantsStyle: 'baggy', helmetStyle: 'round', bootStyle: 'allmtn', boot: '#eceef0', bootAccent: '#a3acb6', skiDesign: 'classic', glove: '#151515', poleCol: '#c3c9d0', strap: '#e8e8ea', lens: 'silver', graphics: 'standard', timeSpeed: 'x20', weather: 'auto', res: 'auto', shadows: 'high', view: 'medium', trees: 'high', fov: 62, shake: true, speedfx: true, snow: true, volume: 0.6, units: 'kmh', hud: true, minimap: true, labels: true, sens: 1 };
 const settings = { ...SETTINGS_DEFAULT };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('arosa-davos-settings') || '{}')); } catch (e) { }
-if (settings.look !== SETTINGS_DEFAULT.look) { const d = SETTINGS_DEFAULT; Object.assign(settings, { look: d.look, jacket: d.jacket, jacket2: d.jacket2, pants: d.pants, helmet: d.helmet, head: d.head, lens: d.lens }); }   // the outfit changed: older saved colours would hide it
+if (settings.look !== SETTINGS_DEFAULT.look) { // older saves: keep the colours of look 2, start fresh before that
+  if (settings.look === 2) { if (settings.head === 'beanie') settings.helmetStyle = 'beanie'; } else { const d = SETTINGS_DEFAULT; Object.assign(settings, { jacket: d.jacket, jacket2: d.jacket2, pants: d.pants, helmet: d.helmet, lens: d.lens }); }
+  settings.look = SETTINGS_DEFAULT.look; delete settings.head;
+}   // the outfit changed: older saved colours would hide it
 function saveSettings() { try { localStorage.setItem('arosa-davos-settings', JSON.stringify(settings)); } catch (e) { } }
 const VIEW = { short: { fog: 0.00009, cull: 4000 }, medium: { fog: 0.000055, cull: 7000 }, long: { fog: 0.000032, cull: 12000 } };
 let cullDist = 7000, adaptiveRes = true, lastTreeSetting = null, cullTimer = 0;
@@ -4732,8 +4935,8 @@ function showMenu(page = 'mMain', paused = true) {
   if (paused) window.__game.paused = true;
   for (const k in keys) keys[k] = false;
 }
-function hideMenu() { $('menu').style.display = 'none'; window.__game.paused = false; initAudio(); }
-function showPage(id) { for (const p of document.querySelectorAll('.mpage')) p.style.display = p.id === id ? '' : 'none'; }
+function hideMenu() { wardToggle(false); $('menu').style.display = 'none'; window.__game.paused = false; initAudio(); }
+function showPage(id) { for (const p of document.querySelectorAll('.mpage')) p.style.display = p.id === id ? '' : 'none'; wardToggle(id === 'mWard'); }
 document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => { initAudio(); showPage(b.dataset.go); }));
 $('mResume').addEventListener('click', hideMenu);
 let gameStarted = false;
@@ -4795,10 +4998,7 @@ function buildSettingsMenu() {
   const chk = (key, label) => `<label class="chk"><input type="checkbox" data-k="${key}" ${settings[key] ? 'checked' : ''}><span>${label}</span></label>`;
   const col = (key, label) => `<label><span>${label}</span><input type="color" data-k="${key}" value="${settings[key]}"></label>`;
   f.innerHTML = `<h4>Gear</h4>
-    ${sel('equip', 'Equipment', Object.entries(EQUIP).map(([k, e]) => [k, e.name]))}
-    ${col('jacket', 'Jacket')}${col('jacket2', 'Jacket trim')}${col('pants', 'Trousers')}${col('helmet', 'Helmet')}
-    ${sel('head', 'Headwear', [['helmet', 'Helmet'], ['beanie', 'Beanie (bobble hat)']])}
-    ${sel('lens', 'Goggle lens', [['orange', 'Orange'], ['blue', 'Blue mirror'], ['silver', 'Silver mirror'], ['gold', 'Gold mirror'], ['green', 'Green mirror']])}
+    <button type="button" id="setWard" class="ghost" style="grid-column:1/-1;justify-self:start">Open the wardrobe: helmets, jackets, trousers, boots and skis (O)</button>
     <h4>Graphics</h4>
     ${sel('quality', 'Quality preset', [['custom', 'Custom'], ['low', 'Low (weak PCs)'], ['medium', 'Medium'], ['high', 'High'], ['ultra', 'Ultra (realistic)']])}
     ${sel('graphics', 'Graphics', [['standard', 'Standard (fast)'], ['realistic', 'Realistic (sky, bloom, sharper shadows)']])}
@@ -4819,6 +5019,7 @@ function buildSettingsMenu() {
     <h4>Interface</h4>
     ${chk('hud', 'Speed panel')}${chk('minimap', 'Minimap')}${chk('labels', 'Peak & restaurant labels')}
     <button type="button" id="setReset" class="ghost">Reset to defaults</button>`;
+  $('setWard').onclick = () => showPage('mWard');
   f.querySelector('[data-time]').addEventListener('change', e => { if (e.target.value) envSetTime(parseFloat(e.target.value)); });
   f.querySelectorAll('[data-k]').forEach(el => el.addEventListener('input', () => {
     const k = el.dataset.k; settings[k] = el.type === 'checkbox' ? el.checked : el.type === 'range' ? parseFloat(el.value) : el.value;
@@ -4828,6 +5029,75 @@ function buildSettingsMenu() {
     applySettings();
   }));
   $('setReset').onclick = () => { Object.assign(settings, SETTINGS_DEFAULT); buildSettingsMenu(); applySettings(); };
+}
+
+// ---------- wardrobe: change the skier's clothes and skis while the camera circles him ----------
+const HELMETS = [['round', 'Round helmet', 'Vented all-rounder'], ['race', 'Race helmet', 'Chin guard and tail fin'], ['free', 'Freestyle helmet', 'Round, with ear pads'], ['cap', 'Snapback cap', 'Flat brim, no helmet'], ['beanie', 'Bobble hat', 'Knitted, with a bobble']];
+const BOOTS = [['allmtn', 'All-mountain boots', 'Medium cuff, three buckles'], ['race', 'Race boots', 'Tall stiff cuff, four buckles'], ['free', 'Freestyle boots', 'Soft and short, two buckles']];
+const SWATCH = ['#0d0d0f', '#f2f2f2', '#8a9099', '#141c33', '#2a6fd6', '#1e7b79', '#2fb36d', '#9bd23c', '#f2c230', '#ff7a1a', '#c8102e', '#d9468f', '#7a4bd1', '#6b4a2f', '#c9b79c', '#a53b2b'];
+const OUTFITS = [
+  { name: 'Parsenn classic', set: { jacketStyle: 'parka', jacket: '#1e7b79', jacket2: '#0f1a30', pantsStyle: 'baggy', pants: '#141c33', pants2: '#0f1a30', helmetStyle: 'round', helmet: '#0d0d0f', bootStyle: 'allmtn', boot: '#eceef0', bootAccent: '#a3acb6', skiDesign: 'classic', lens: 'silver', strap: '#e8e8ea', glove: '#151515', poleCol: '#c3c9d0' } },
+  { name: 'Race day', set: { jacketStyle: 'race', jacket: '#c8102e', jacket2: '#f2f2f2', pantsStyle: 'slim', pants: '#0d0d0f', pants2: '#c8102e', helmetStyle: 'race', helmet: '#f2f2f2', bootStyle: 'race', boot: '#16181c', bootAccent: '#c8102e', skiDesign: 'swiss', lens: 'orange', strap: '#c8102e', glove: '#0d0d0f', poleCol: '#c8102e' } },
+  { name: 'Park rat', set: { jacketStyle: 'puffer', jacket: '#f2c230', jacket2: '#141c33', pantsStyle: 'cargo', pants: '#3a4150', pants2: '#141c33', helmetStyle: 'free', helmet: '#f2f2f2', bootStyle: 'free', boot: '#16181c', bootAccent: '#9bd23c', skiDesign: 'neon', lens: 'gold', strap: '#141c33', glove: '#141c33', poleCol: '#9bd23c' } },
+  { name: 'Retro 80s', set: { jacketStyle: 'retro', jacket: '#d9468f', jacket2: '#19c4e0', pantsStyle: 'jogger', pants: '#1b1d3a', pants2: '#19c4e0', helmetStyle: 'cap', helmet: '#19c4e0', bootStyle: 'free', boot: '#f2f2f2', bootAccent: '#d9468f', skiDesign: 'sunset', lens: 'blue', strap: '#d9468f', glove: '#d9468f', poleCol: '#19c4e0' } },
+  { name: 'Stealth', set: { jacketStyle: 'parka', jacket: '#16171b', jacket2: '#2b2d33', pantsStyle: 'baggy', pants: '#0d0d0f', pants2: '#2b2d33', helmetStyle: 'round', helmet: '#0d0d0f', bootStyle: 'allmtn', boot: '#16181c', bootAccent: '#9bff3c', skiDesign: 'stealth', lens: 'silver', strap: '#2b2d33', glove: '#0d0d0f', poleCol: '#2b2d33' } },
+  { name: 'Powder day', set: { jacketStyle: 'puffer', jacket: '#ff7a1a', jacket2: '#141c33', pantsStyle: 'cargo', pants: '#141c33', pants2: '#ff7a1a', helmetStyle: 'beanie', helmet: '#141c33', bootStyle: 'allmtn', boot: '#eceef0', bootAccent: '#ff7a1a', skiDesign: 'camo', lens: 'green', strap: '#141c33', glove: '#ff7a1a', poleCol: '#c3c9d0' } },
+];
+const WARD_TABS = [['outfits', 'Outfits'], ['helmet', 'Helmet'], ['goggles', 'Goggles'], ['jacket', 'Jacket'], ['pants', 'Trousers'], ['boots', 'Boots'], ['skis', 'Skis'], ['extras', 'Gloves & poles']];
+const WARD_FOCUS = { outfits: ['pelvis', 0.35, 4.6, 0.12], helmet: ['neck', 0.2, 1.6, 0.05], goggles: ['neck', 0.18, 1.4, 0.05], jacket: ['neck', -0.3, 2.9, 0.1], pants: ['pelvis', -0.4, 3.0, 0.1], boots: ['ankle', 0.1, 2.0, 0.16], skis: ['ankle', 0, 3.6, 0.5], extras: ['pelvis', 0.3, 2.7, 0.1] };   // what the camera looks at: [body part, height above it, distance, pitch]
+function wardToggle(on) {
+  if (on === WARD.on) return;
+  WARD.on = on; $('menu').classList.toggle('ward', on); document.body.classList.toggle('wardmode', on);
+  if (!WARD.stage) { WARD.stage = new THREE.Mesh(new THREE.CylinderGeometry(1.9, 2.0, 0.36, 48), new THREE.MeshStandardMaterial({ color: '#f1f5fa', roughness: 0.9 })); WARD.stage.receiveShadow = true; scene.add(WARD.stage); }
+  WARD.stage.visible = on;
+  if (on) { WARD.saved = { yaw: orbitYaw, pitch: orbitPitch, dist: camDistT, mode: camMode }; camMode = 0; orbitYaw = 2.6; wardFocus(); WARD.fy = WARD.fyT; buildWardrobe(); }
+  else if (WARD.saved) { orbitYaw = WARD.saved.yaw; orbitPitch = WARD.saved.pitch; camDistT = WARD.saved.dist; camMode = WARD.saved.mode; WARD.saved = null; }
+}
+function wardFocus() { const [b, y, d, p] = WARD_FOCUS[WARD.tab] || WARD_FOCUS.outfits; WARD.bone = b; WARD.fyT = y; camDistT = d; orbitPitch = p; }
+function wardSet(patch) { Object.assign(settings, patch); applyGear(); saveSettings(); }
+function buildWardrobe() {
+  const root = $('wardBody'); if (!root) return; const st = settings, t = WARD.tab;
+  const cards = (key, list) => `<div class="wgrid">${list.map(([v, n, d]) => `<button type="button" class="wcard ${st[key] === v ? 'on' : ''}" data-set="${key}" data-v="${v}"><b>${n}</b><span>${d}</span></button>`).join('')}</div>`;
+  const sw = (key, label, list = SWATCH) => `<div class="wlab">${label}</div><div class="wsw">${list.map(c => `<button type="button" title="${c}" class="${String(st[key]).toLowerCase() === c ? 'on' : ''}" style="background:${c}" data-set="${key}" data-v="${c}"></button>`).join('')}<input type="color" data-col="${key}" value="${st[key]}"></div>`;
+  const lens = `<div class="wlab">Lens</div><div class="wsw">${Object.entries(LENS).map(([k, c]) => `<button type="button" title="${k}" class="${st.lens === k ? 'on' : ''}" style="background:${c}" data-set="lens" data-v="${k}"></button>`).join('')}</div>`;
+  let h = '';
+  if (t === 'outfits') {
+    h = `<div class="wgrid">${OUTFITS.map((o, i) => `<button type="button" class="wcard" data-outfit="${i}"><b>${o.name}</b><span class="dots">${[o.set.jacket, o.set.jacket2, o.set.pants, o.set.helmet, o.set.boot].map(c => `<i style="background:${c}"></i>`).join('')}</span></button>`).join('')}<button type="button" class="wcard" data-outfit="rand"><b>Surprise me</b><span>A random mix of everything</span></button></div>`;
+  } else if (t === 'helmet') h = cards('helmetStyle', HELMETS) + sw('helmet', 'Colour');
+  else if (t === 'goggles') h = lens + sw('strap', 'Strap');
+  else if (t === 'jacket') h = cards('jacketStyle', Object.entries(JACKETS).map(([k, j]) => [k, j.name, j.desc])) + sw('jacket', 'Main colour') + sw('jacket2', 'Trim colour');
+  else if (t === 'pants') h = cards('pantsStyle', Object.entries(PANTS).map(([k, p]) => [k, p.name, p.desc])) + sw('pants', 'Colour') + sw('pants2', 'Cuff and trim colour');
+  else if (t === 'boots') h = cards('bootStyle', BOOTS) + sw('boot', 'Shell colour') + sw('bootAccent', 'Buckle and cuff colour');
+  else if (t === 'skis') {
+    h = `<div class="wlab">Skis or board (they handle differently)</div>` + cards('equip', Object.entries(EQUIP).map(([k, e]) => [k, e.short, e.desc]))
+      + `<div class="wlab">Design</div><div class="wgrid">${Object.entries(SKI_DESIGNS).map(([k, d]) => `<button type="button" class="wcard ${st.skiDesign === k ? 'on' : ''}" data-set="skiDesign" data-v="${k}"><canvas width="140" height="22" data-ski="${k}"></canvas><b>${d.name}</b></button>`).join('')}</div>`;
+  } else if (t === 'extras') h = sw('glove', 'Gloves') + sw('poleCol', 'Poles');
+  h += `<div class="wlab">Try the wind: <em id="wardWv">${Math.round(WARD.wind * 3.6)} km/h</em> — loose clothes flutter, stream back and swing</div><input type="range" id="wardWind" min="0" max="110" step="1" value="${Math.round(WARD.wind * 3.6)}">`;
+  root.innerHTML = `<div class="wtabs">${WARD_TABS.map(([k, n]) => `<button type="button" class="${k === t ? 'on' : ''}" data-tab="${k}">${n}</button>`).join('')}</div>${h}`;
+  const wr = root.closest('.mwrap'); if (wr) WARD.px = wr.getBoundingClientRect().right + 8;
+  root.querySelectorAll('canvas[data-ski]').forEach(cv => { const c = cv.getContext('2d'); c.save(); c.translate(0, 22); c.rotate(-Math.PI / 2); c.drawImage(skiCanvas(cv.dataset.ski), 0, 0, 22, 140); c.restore(); });
+}
+{
+  const root = $('wardBody');
+  root.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.tab) { WARD.tab = b.dataset.tab; wardFocus(); buildWardrobe(); return; }
+    if (b.dataset.outfit !== undefined) {
+      if (b.dataset.outfit === 'rand') {
+        const pick = a => a[Math.floor(Math.random() * a.length)], dark = ['#0d0d0f', '#141c33', '#3a4150', '#1b1d3a', '#6b4a2f', '#16171b'];
+        wardSet({ jacketStyle: pick(Object.keys(JACKETS)), jacket: pick(SWATCH), jacket2: pick(SWATCH), pantsStyle: pick(Object.keys(PANTS)), pants: pick(dark), pants2: pick(SWATCH), helmetStyle: pick(HELMETS)[0], helmet: pick(SWATCH),
+          bootStyle: pick(BOOTS)[0], boot: pick(['#eceef0', '#16181c', '#8a9099', '#c8102e']), bootAccent: pick(SWATCH), skiDesign: pick(Object.keys(SKI_DESIGNS)), lens: pick(Object.keys(LENS)), strap: pick(SWATCH), glove: pick(dark), poleCol: pick(SWATCH) });
+      } else wardSet(OUTFITS[+b.dataset.outfit].set);
+      buildWardrobe(); return;
+    }
+    if (b.dataset.set) { wardSet({ [b.dataset.set]: b.dataset.v }); buildWardrobe(); }
+  });
+  root.addEventListener('input', e => {
+    const el = e.target;
+    if (el.dataset.col) { wardSet({ [el.dataset.col]: el.value }); root.querySelectorAll(`.wsw button[data-set="${el.dataset.col}"]`).forEach(b => b.classList.remove('on')); }
+    if (el.id === 'wardWind') { WARD.wind = parseFloat(el.value) / 3.6; $('wardWv').textContent = el.value + ' km/h'; }
+  });
+  $('wardDone').onclick = () => { if (gameStarted) hideMenu(); else showPage('mMain'); };
 }
 
 // ---------- maps ----------
@@ -5013,7 +5283,7 @@ addEventListener('resize', resize);
   const start = lifts.find(l => /Weisshornbahn 2/.test(l.name)) || lifts.sort((a, b) => b.top.y - a.top.y)[0];
   teleportTop(start); $('msg').style.display = 'none'; msgT = 0;
   camPos.copy(S.p).add(new THREE.Vector3(0, 30, -30));
-  Object.assign(window.__game, { RACES, RESCUE, QUALITY, FPS, raceGoto, rescueBegin, coursePoint, projectCourse, POW, powderDepthAt, ENV, EQ, settings: () => settings });
+  Object.assign(window.__game, { RACES, RESCUE, QUALITY, FPS, WARD, setOrbit: (y, p) => { orbitYaw = y; if (p !== undefined) orbitPitch = p; }, raceGoto, rescueBegin, coursePoint, projectCourse, POW, powderDepthAt, ENV, EQ, settings: () => settings });
   $('loading').style.display = 'none';
   showMenu('mMain'); $('mMain').querySelector('[data-go="mStart"]').classList.add('primary');
   let last = performance.now(), clock = 0, physAcc = 0;
