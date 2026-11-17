@@ -12,6 +12,14 @@ A browser ski game set in a 1:1 recreation of **Arosa Lenzerheide** (both sides 
 - Race mode on 13 real race pistes (World Cup course Silvano Beltrametti, Pedra Grossa, slalom hill ...): start portal, gates, finish, penalties, best times and a ghost of your best run (T menu → Race courses)
 - A bad crash (about 40 km/h or faster) means you cannot just get up: the ski patrol skis down to you and takes you to a valley station, after a really bad one a rescue helicopter flies you out
 - Deep powder off the pistes: you sink in and it drags and sprays; speed and wide skis keep you afloat
+- The snow changes through the day: fresh corduroy in the morning, icy after a clear night, skied off with shiny icy patches by the afternoon, sticky slush in the spring sun; mogul runs grow bumpier during the day and the groomers flatten them overnight; edges chatter on ice
+- Wind: deep wind-loaded powder on lee slopes, crust on the windward side, cornices on the ridges and snow blowing off them in a storm; tree wells round the trunks in deep snow
+- Low clouds you can ski into (whiteout) and out of (sunshine above a sea of clouds); your breath in the cold, goggles that mist up, snow sticking to your clothes after a fall
+- Tracks stay all day (yours and the other skiers’), the groomers wipe the pistes in the evening and new snow covers the powder tracks
+- Other skiers in jackets, trousers and helmets of their own; lift information boards at the valley stations and piste signposts at the top stations
+- Optional leg fatigue: rest on lifts, stand still or stop at a hut
+- Five cameras (C): follow, first person with goggle view, high, helmet cam, GoPro on a pole with fisheye; quick restart of the run (Backspace)
+- Gamepad (analog edging, triggers, rumble), steering feel presets and sliders, every key can be rebound (Settings), skier profiles with their own outfit, stats and best times, a compass bar and labels on the minimap
 - Quality presets (Low to Ultra) and a frame-rate counter (F3)
 - Standard or realistic graphics (physical sky, bloom, sharper shadows) in the settings; physically based snow with glinting crystals
 - Three.js renderer, no build step
@@ -59,9 +67,12 @@ It cuts the real ragdoll code out of `swiss-ski/index.html` and drops the body o
 | F3 | show / hide the frame rate |
 | T | teleport to a lift top or restaurant |
 | M | map: scroll or + / − to zoom, drag to pan, click to drop in |
-| C | camera mode |
+| C | camera: follow, first person, high, helmet cam, GoPro (fisheye) |
+| Backspace | restart the run |
 | Page Up / Page Down, mouse wheel | zoom |
 | Mouse drag | orbit the camera |
+
+A gamepad works too (left stick steers, RT tuck, LT brake, A jump, B hockey stop, X get up, Y lift, RB grab, LB camera). All keys can be changed under Settings → Keys.
 
 ## Data
 
