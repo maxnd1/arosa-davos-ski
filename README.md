@@ -10,7 +10,7 @@ A browser ski game set in a 1:1 recreation of **Arosa Lenzerheide** (both sides 
 - Wardrobe (O, or the main menu): a live 3D preview while you pick outfits, helmets (round, race, freestyle, cap, bobble hat), jackets (baggy parka, puffer, race suit, retro anorak), trousers (baggy, cargo, race, joggers), boots, goggles, gloves and poles, nine ski and board designs, and all their colours. Baggy clothes react to speed, wind and turns (a wind slider shows it)
 - Ski touring with skins, and an avalanche transceiver search drill
 - Race mode on 13 real race pistes (World Cup course Silvano Beltrametti, Pedra Grossa, slalom hill ...): start portal, gates, finish, penalties, best times and a ghost of your best run (T menu → Race courses)
-- A bad crash (about 40 km/h or faster) means you cannot just get up: the ski patrol skis down to you and takes you to a valley station, after a really bad one a rescue helicopter flies you out
+- A bad crash (about 40 km/h or faster) means you cannot just get up: the ski patrol skis down to you and takes you to a valley station, after a really bad one a rescue helicopter flies you out (can be switched off in the settings: then you can always get up with R)
 - Deep powder off the pistes: you sink in and it drags and sprays; speed and wide skis keep you afloat
 - The snow changes through the day: fresh corduroy in the morning, icy after a clear night, skied off with shiny icy patches by the afternoon, sticky slush in the spring sun; mogul runs grow bumpier during the day and the groomers flatten them overnight; edges chatter on ice
 - Wind: deep wind-loaded powder on lee slopes, crust on the windward side, cornices on the ridges and snow blowing off them in a storm; tree wells round the trunks in deep snow

@@ -4177,7 +4177,8 @@ function rescueAgents() {
 }
 function rescueBegin(v, why) { // called from crash()
   const spd = v.length(), ex = /avalanche|Railway/i.test(why);
-  RESCUE.bad = spd >= 11 || ex; RESCUE.severe = spd >= 22 || ex; RESCUE.active = false; RESCUE.phase = ''; RESCUE.msg = '';
+  RESCUE.bad = settings.rescue !== false && (spd >= 11 || ex);   // rescue switched off: you can always get up with R
+  RESCUE.severe = spd >= 22 || ex; RESCUE.active = false; RESCUE.phase = ''; RESCUE.msg = '';
 }
 function rescueClear() {
   RESCUE.active = false; RESCUE.phase = ''; if (RESCUE.patrol) RESCUE.patrol.mesh.count = 0; if (RESCUE.sled) RESCUE.sled.visible = false;
@@ -5571,7 +5572,7 @@ function saveTick(dt) {
 addEventListener('beforeunload', writeSave);
 
 // ---------- settings (saved in this browser) ----------
-const SETTINGS_DEFAULT = { quality: 'high', fps: false, equip: 'allmtn', look: 3, jacket: '#1e7b79', jacket2: '#0f1a30', pants: '#141c33', pants2: '#0f1a30', helmet: '#0d0d0f', jacketStyle: 'parka', pantsStyle: 'baggy', helmetStyle: 'round', bootStyle: 'allmtn', boot: '#eceef0', bootAccent: '#a3acb6', skiDesign: 'classic', glove: '#151515', poleCol: '#c3c9d0', strap: '#e8e8ea', lens: 'silver', graphics: 'standard', timeSpeed: 'x20', weather: 'auto', res: 'auto', shadows: 'high', view: 'medium', trees: 'high', fov: 62, shake: true, speedfx: true, snow: true, volume: 0.6, units: 'kmh', hud: true, minimap: true, labels: true, sens: 1, handling: 'normal', steerSpeed: 1, gripAssist: 0, autoBalance: 0, fatigue: true, compass: true, binds: {} };
+const SETTINGS_DEFAULT = { quality: 'high', fps: false, equip: 'allmtn', look: 3, jacket: '#1e7b79', jacket2: '#0f1a30', pants: '#141c33', pants2: '#0f1a30', helmet: '#0d0d0f', jacketStyle: 'parka', pantsStyle: 'baggy', helmetStyle: 'round', bootStyle: 'allmtn', boot: '#eceef0', bootAccent: '#a3acb6', skiDesign: 'classic', glove: '#151515', poleCol: '#c3c9d0', strap: '#e8e8ea', lens: 'silver', graphics: 'standard', timeSpeed: 'x20', weather: 'auto', res: 'auto', shadows: 'high', view: 'medium', trees: 'high', fov: 62, shake: true, speedfx: true, snow: true, volume: 0.6, units: 'kmh', hud: true, minimap: true, labels: true, sens: 1, handling: 'normal', steerSpeed: 1, gripAssist: 0, autoBalance: 0, fatigue: true, rescue: true, compass: true, binds: {} };
 const settings = { ...SETTINGS_DEFAULT };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('arosa-davos-settings') || '{}')); } catch (e) { }
 if (settings.look !== SETTINGS_DEFAULT.look) { // older saves: keep the colours of look 2, start fresh before that
@@ -5702,7 +5703,7 @@ function buildSettingsMenu() {
     <h4>Handling</h4>
     ${sel('handling', 'Steering feel', [['arcade', 'Arcade (forgiving)'], ['normal', 'Normal'], ['sim', 'Simulation'], ['custom', 'Custom']])}
     ${rng('steerSpeed', 'Steering speed', 0.5, 1.6, 0.05)}${rng('gripAssist', 'Edge grip assist', 0, 1, 0.05)}${rng('autoBalance', 'Auto-balance', 0, 1, 0.05)}
-    ${chk('fatigue', 'Leg fatigue (rest on lifts and at huts)')}
+    ${chk('fatigue', 'Leg fatigue (rest on lifts and at huts)')}${chk('rescue', 'Ski patrol after bad crashes (off: always get up with R)')}
     <h4>Keys</h4><div id="bindList" style="grid-column:1/-1"></div>
     <h4>Interface</h4>
     ${chk('hud', 'Speed panel')}${chk('compass', 'Compass bar')}${chk('minimap', 'Minimap')}${chk('labels', 'Peak & restaurant labels')}
@@ -5713,6 +5714,7 @@ function buildSettingsMenu() {
     const k = el.dataset.k; settings[k] = el.type === 'checkbox' ? el.checked : el.type === 'range' ? parseFloat(el.value) : el.value;
     if (el.type === 'range') $('v_' + k).textContent = settings[k];
     if (k === 'quality' && QUALITY[settings.quality]) { Object.assign(settings, QUALITY[settings.quality]); applySettings(); buildSettingsMenu(); return; }
+    if (k === 'rescue' && !settings.rescue && (RESCUE.bad || RESCUE.active)) { rescueClear(); RESCUE.bad = false; if (RESCUE.fadeEl) rescueFade(0, 300); }
     if (k === 'handling' && HANDLING[settings.handling]) { Object.assign(settings, HANDLING[settings.handling]); applySettings(); buildSettingsMenu(); return; }
     if (['steerSpeed', 'gripAssist', 'autoBalance'].includes(k) && settings.handling !== 'custom') { settings.handling = 'custom'; const q = f.querySelector('[data-k="handling"]'); if (q) q.value = 'custom'; }
     if (['graphics', 'res', 'shadows', 'view', 'trees'].includes(k) && settings.quality !== 'custom') { settings.quality = 'custom'; const q = f.querySelector('[data-k="quality"]'); if (q) q.value = 'custom'; }
