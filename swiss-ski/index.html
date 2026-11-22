@@ -83,6 +83,25 @@
   #loading canvas#lart { position:absolute; inset:0; width:100%; height:100%; z-index:-1; }
   #loading .lbox { padding:22px 34px; border-radius:16px; background:rgba(10,18,32,.5); backdrop-filter:blur(6px); color:#fff; display:flex; flex-direction:column; align-items:center; text-align:center; }
   #loading #ltip { max-width:520px; margin:16px 0 0; font-size:14px; opacity:1; transition:opacity .25s; min-height:2.6em; }
+  body.photomode #hud, body.photomode #msg, body.photomode #mini, body.photomode #help, body.photomode #prompt, body.photomode #compass, body.photomode #labels, body.photomode #speedfx, body.photomode #slowmo, body.photomode #goggle { display:none !important; }
+  #photoPanel { position:fixed; right:14px; top:14px; width:300px; max-height:calc(100vh - 28px); overflow:auto; padding:12px 14px; border-radius:12px; background:rgba(10,18,32,.84); border:1px solid var(--line); z-index:9; display:none; font-size:13px; }
+  #photoPanel .ph { display:flex; flex-direction:column; gap:2px; margin-bottom:8px; } #photoPanel .ph span { font-size:11px; opacity:.65; }
+  #photoPanel label { display:flex; flex-direction:column; gap:3px; margin:7px 0; } #photoPanel label em { font-style:normal; opacity:.7; float:right; } #photoPanel label.chk { flex-direction:row; align-items:center; gap:8px; }
+  #photoPanel input[type=range] { width:100%; } #photoPanel select, #photoPanel input[type=text] { background:#1a2638; color:#fff; border:1px solid var(--line); border-radius:6px; padding:5px; font:inherit; }
+  #photoPanel .pb { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; } #photoPanel .pb button { font:inherit; color:#fff; background:rgba(255,255,255,.08); border:1px solid var(--line); border-radius:7px; padding:6px 10px; cursor:pointer; } #photoPanel .pb button.primary { background:var(--accent); border-color:var(--accent); }
+  #photoFrame { position:fixed; inset:0; width:100vw; height:100vh; pointer-events:none; z-index:5; display:none; }
+  .shutter { position:fixed; inset:0; background:#fff; z-index:30; pointer-events:none; animation:shut .45s ease-out forwards; } @keyframes shut { from { opacity:.85; } to { opacity:0; } }
+  #tlBadge { position:fixed; left:50%; top:16px; transform:translateX(-50%); padding:6px 14px; border-radius:8px; background:rgba(10,18,32,.8); font-weight:600; z-index:9; display:none; }
+  .agrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px; } .athumb { padding:0; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:rgba(255,255,255,.05); display:flex; flex-direction:column; text-align:left; }
+  .athumb img { width:100%; aspect-ratio:16/9; object-fit:cover; display:block; } .athumb span { font-size:11.5px; padding:6px 8px; opacity:.8; }
+  .aview img { width:100%; max-height:62vh; object-fit:contain; border-radius:10px; background:#000; } .abtn { color:#fff; text-decoration:none; display:inline-block; }
+  #touch { position:fixed; inset:auto 0 0 0; height:0; z-index:6; }
+  #touch .tstick { position:fixed; left:16px; bottom:16px; width:200px; height:84px; border-radius:42px; background:rgba(12,22,38,.45); border:1px solid var(--line); touch-action:none; display:flex; align-items:center; justify-content:center; }
+  #touch .tstick span { position:absolute; bottom:4px; font-size:10px; opacity:.6; letter-spacing:.1em; text-transform:uppercase; } #touch .tknob { width:60px; height:60px; border-radius:50%; background:rgba(255,255,255,.35); pointer-events:none; }
+  #touch .tbtns { position:fixed; right:12px; bottom:14px; display:grid; grid-template-columns:repeat(4, 64px); gap:8px; }
+  #touch .tbtns button, #touch .ttilt { height:52px; border-radius:12px; border:1px solid var(--line); background:rgba(12,22,38,.5); color:#fff; font:600 12px system-ui; touch-action:none; user-select:none; } #touch .tbtns button.on { background:var(--accent); }
+  #touch .ttilt { position:fixed; left:16px; bottom:110px; height:36px; padding:0 12px; }
+  body.touchui #help { display:none !important; }
   #speedfx { position:fixed; inset:0; pointer-events:none; opacity:0; background:radial-gradient(ellipse at center, rgba(0,0,0,0) 52%, rgba(10,20,35,.35) 78%, rgba(10,20,35,.75) 100%); }
   #menu { display:none; align-items:center; justify-content:center; background:rgba(8,16,30,.55); backdrop-filter:blur(7px) saturate(.8); opacity:0; transition:opacity .2s; }
   #menu.show { opacity:1; } #menu:not(.open) { pointer-events:none; }
@@ -139,7 +158,7 @@
 <div id="prompt" class="panel"></div>
 <div id="msg" class="panel"></div>
 <div id="help" class="panel">
-  <b>A</b>/<b>D</b> steer · <b>W</b> tuck / skate · <b>S</b> pizza (snowplough) · <b>Q</b> hockey stop · <b>Space</b> jump · <b>Shift</b>/<b>W</b>/<b>S</b> in the air: grab, flips · <b>E</b> ride lift · <b>F</b> fast-forward lift · <b>T</b> teleport · <b>M</b> map · <b>K</b> skis on/off · <b>O</b> wardrobe · <b>R</b> get up · <b>⌫</b> restart · <b>V</b> replay · <b>X</b> slow-mo · <b>C</b> camera · <b>PgUp</b>/<b>PgDn</b> zoom · <b>Esc</b> menu
+  <b>A</b>/<b>D</b> steer · <b>W</b> tuck / skate · <b>S</b> pizza (snowplough) · <b>Q</b> hockey stop · <b>Space</b> jump · <b>Shift</b>/<b>W</b>/<b>S</b> in the air: grab, flips · <b>E</b> ride lift · <b>F</b> fast-forward lift · <b>T</b> teleport · <b>M</b> map · <b>K</b> skis on/off · <b>O</b> wardrobe · <b>R</b> get up · <b>⌫</b> restart · <b>V</b> replay · <b>X</b> slow-mo · <b>H</b> photo · <b>C</b> camera · <b>PgUp</b>/<b>PgDn</b> zoom · <b>Esc</b> menu
 </div>
 <div id="tele" class="overlay"><div class="inner">
   <h2>Teleport</h2><div style="opacity:.7">Real lifts and mountain restaurants from OpenStreetMap · Esc to close</div>
@@ -155,11 +174,13 @@
     <button class="big" data-go="mStart">Choose your start</button>
     <button class="big" data-go="mProfile" id="profBtn">Profile</button>
     <button class="big" data-go="mWard">Wardrobe</button>
+    <button class="big" data-go="mAlbum">Photo album</button>
     <button class="big" data-go="mSettings">Settings</button>
     <button class="big" data-go="mControls">Controls</button>
   </div>
   <div id="mStart" class="mpage"><div class="mhead"><button class="ghost" data-go="mMain">← Back</button><h2>Where do you want to start?</h2></div><div id="startGrid" class="grid"></div></div>
   <div id="mProfile" class="mpage"><div class="mhead"><button class="ghost" data-go="mMain">← Back</button><h2>Skier profiles</h2></div><div id="profBody"></div></div>
+  <div id="mAlbum" class="mpage"><div class="mhead"><button class="ghost" data-go="mMain">← Back</button><h2>Photo album</h2></div><div id="albumBody"></div></div>
   <div id="mWard" class="mpage"><div class="mhead"><button class="ghost" data-go="mMain">← Back</button><h2>Wardrobe</h2><button class="ghost" id="wardDone" style="margin-left:auto">Done</button></div><div id="wardBody"></div></div>
   <div id="mSettings" class="mpage"><div class="mhead"><button class="ghost" data-go="mMain">← Back</button><h2>Settings</h2></div><form id="setForm" onsubmit="return false"></form></div>
   <div id="mControls" class="mpage"><div class="mhead"><button class="ghost" data-go="mMain">← Back</button><h2>Controls</h2></div>
@@ -180,6 +201,8 @@
       <tr><td><b>T</b> / <b>M</b></td><td>Teleport list · zoomable map (scroll, drag, click to drop in)</td></tr>
       <tr><td><b>C</b></td><td>Camera: follow · first person (goggles) · high · helmet cam · GoPro on a pole (fisheye)</td></tr>
       <tr><td><b>V</b></td><td>Replay of the last 30 s from cinematic cameras: Space pause, ← → skip, S slow motion, C camera, Enter save the clip, V or Esc back</td></tr>
+      <tr><td><b>H</b></td><td>Photo mode: drag to orbit, wheel to zoom, W A S D Q E to move; lens, depth of field, filters, frames and captions; Enter takes the photo (it goes to the album in the main menu); also a time-lapse of the whole day</td></tr>
+      <tr><td>Ski tours</td><td>T → Ski tours: touring skis and skins on at the start of a marked (pink) route to a real summit with a cross and a summit book</td></tr>
       <tr><td><b>X</b> (hold)</td><td>Slow motion (big jumps and bad crashes slow down by themselves — Settings → Interface)</td></tr>
       <tr><td><b>Backspace</b></td><td>Restart the run from where it started (lift exit, teleport, race start)</td></tr>
       <tr><td>Gamepad</td><td>Left stick steers (analog) · RT tuck · LT brake · A jump · B hockey stop · X get up · Y lift · RB grab · LB camera · right stick looks around · Start menu</td></tr>
@@ -2253,6 +2276,7 @@ const keys = {};
 window.__game = { terrainParts: (x, z) => ({ base: hBase(x, z), groomed: hGroomed(x, z), detail: detail(x, z), moguls: moguls(x, z), park: parkH(x, z), pm: pmAt(x, z) }), S, scene, renderer, camera, crash: w => crash(w), rag: () => RAG, getUp: () => getUp(), hAt, normalAt, lifts, buildings, pistes, restaurants, placeAt: (...a) => placeAt(...a), step: dt => step(dt), keys, tryLift: () => tryLift(), setNear: l => nearLift = l };
 function keyPress(code, e) {
   if (REPLAY.on) { replayKey(code); return; }
+  if (PHOTO.on) { photoKey(code); return; }
   if (code === 'Escape') {
     if ($('tele').style.display === 'block' || $('bigmap').style.display === 'block') { $('tele').style.display = 'none'; closeMap(); return; }
     if (isMenuOpen()) { if (gameStarted) hideMenu(); } else showMenu('mMain');
@@ -2280,10 +2304,12 @@ function keyPress(code, e) {
   if (code === 'KeyE') tryLift();
   if (code === 'Backspace') restartRun();
   if (code === 'KeyV') replayStart();
+  if (code === 'KeyH') photoStart();
   if (code === 'Space') jump();
 }
 addEventListener('keydown', e => {
   if (BINDS.capture) { e.preventDefault(); BINDS.capture(e.code); return; }
+  if (e.target && /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName) && e.code !== 'Escape') return;   // typing a caption
   if (e.repeat) return;
   if (e.code === 'Escape') { keyPress('Escape', e); return; }
   const code = vcode(e.code); if (!code) return;
@@ -2406,7 +2432,7 @@ function step(dt) {
     S.v.copy(liftDir).multiplyScalar(sp || 0);
     return;
   }
-  const steerIn = clamp((keys.KeyA || keys.ArrowLeft ? 1 : 0) - (keys.KeyD || keys.ArrowRight ? 1 : 0) + PAD.steer, -1, 1), steerSg = Math.sign(steerIn);
+  const steerIn = clamp((keys.KeyA || keys.ArrowLeft ? 1 : 0) - (keys.KeyD || keys.ArrowRight ? 1 : 0) + PAD.steer + TOUCH.steer, -1, 1), steerSg = Math.sign(steerIn);
   const brake = keys.KeyS || keys.ArrowDown, tuck = keys.KeyW || keys.ArrowUp, stopKey = keys.KeyQ;
   // smooth steering: the input eases in and out instead of snapping
   S.steer += (steerIn - S.steer) * Math.min(1, dt * 8 * CTL.sp);
@@ -2975,6 +3001,7 @@ function aiSkierGeometry() { // low-poly skier in a carving stance, in four part
   return [base, jk, pa, he].map(b => b.geometry());
 }
 const AI = { list: [], mesh: null, parts: [], fullGeo: null, n: 52, nAct: 34, school: null };
+const _aiFr = new THREE.Frustum(), _aiM = new THREE.Matrix4(), _aiS = new THREE.Sphere(new THREE.Vector3(), 6);
 const AI_INSTR = { j: C('#d8232a'), p: C('#1b1d22'), h: C('#d8232a') };
 function aiOutfit(kid) { // what the other skiers wear: some of the wardrobe outfits, otherwise a random mix
   const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -3007,7 +3034,9 @@ function updateAI(dt) {
   if (!AI.mesh) return;
   const on = gameStarted && ENV.hour > 8.4 && ENV.hour < 17 && settings.people !== false;
   let n = 0; const m4 = _cm, q = _cq, e = new THREE.Euler();
-  const put = (o, out, sc) => { e.set(o.fallen > 0 ? 1.45 : 0, o.yaw, o.fallen > 0 ? 0.3 : o.lean, 'YXZ'); q.setFromEuler(e); _cs.set(sc, sc, sc); m4.compose(_cp.set(o.x, o.y + (o.fallen > 0 ? 0.25 : 0), o.z), q, _cs); for (const m of AI.parts) m.setMatrixAt(n, m4); AI.parts[1].setColorAt(n, out.j); AI.parts[2].setColorAt(n, out.p); AI.parts[3].setColorAt(n, out.h); n++; };
+  _aiM.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); _aiFr.setFromProjectionMatrix(_aiM);
+  const put = (o, out, sc) => { _aiS.center.set(o.x, o.y + 1, o.z); if (!_aiFr.intersectsSphere(_aiS)) return;   // off-screen skiers are not drawn
+    e.set(o.fallen > 0 ? 1.45 : 0, o.yaw, o.fallen > 0 ? 0.3 : o.lean, 'YXZ'); q.setFromEuler(e); _cs.set(sc, sc, sc); m4.compose(_cp.set(o.x, o.y + (o.fallen > 0 ? 0.25 : 0), o.z), q, _cs); for (const m of AI.parts) m.setMatrixAt(n, m4); AI.parts[1].setColorAt(n, out.j); AI.parts[2].setColorAt(n, out.p); AI.parts[3].setColorAt(n, out.h); n++; };
   AI.nAct = Math.round(8 + 44 * busyNow());                          // weekends and middays are busy
   if (on) for (let ai = 0; ai < AI.list.length; ai++) {
     const a = AI.list[ai]; if (ai >= AI.nAct) { a.dead = true; continue; }
@@ -3038,7 +3067,7 @@ function updateAI(dt) {
       if (n < 118) put(m, m.i === 0 ? AI_INSTR : (m.out || (m.out = aiOutfit(true))), m.i === 0 ? 1.0 : 0.66);
     }
   }
-  if (on) n = drawQueues(n, put);
+  if (on) drawQueues(() => n, put);
   for (const m of AI.parts) { m.count = n; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
 }
 // ---------- snowcats: grooming after the lifts close and early in the morning ----------
@@ -4350,27 +4379,41 @@ function windDepthK(x, z) { // powder depth factor: deep on lee slopes, crusty a
   return f > 0 ? 1 + 0.6 * f * k : 1 + 0.65 * f * k;
 }
 function softDot() { const c = document.createElement('canvas'); c.width = c.height = 32; const x = c.getContext('2d'), g = x.createRadialGradient(16, 16, 0, 16, 16, 16); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.5, 'rgba(255,255,255,.45)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 32, 32); return new THREE.CanvasTexture(c); }
-function makePuffs(N, col) { // soft particles with their own size and fade
-  const pos = new Float32Array(N * 3), al = new Float32Array(N), sz = new Float32Array(N), vel = new Float32Array(N * 3), life = new Float32Array(N), max = new Float32Array(N), s0 = new Float32Array(N), s1 = new Float32Array(N), a0 = new Float32Array(N);
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('aA', new THREE.BufferAttribute(al, 1)); g.setAttribute('aS', new THREE.BufferAttribute(sz, 1));
-  const mat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, uniforms: { uH: { value: 400 }, map: { value: softDot() }, col: { value: new THREE.Color(col) } },
-    vertexShader: 'attribute float aA; attribute float aS; uniform float uH; varying float vA; void main(){ vA = aA; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; gl_PointSize = aS * projectionMatrix[1][1] * uH / max(0.1, -mv.z); }',
-    fragmentShader: 'uniform sampler2D map; uniform vec3 col; varying float vA; void main(){ float a = texture2D(map, gl_PointCoord).a * vA; if (a < 0.01) discard; gl_FragColor = vec4(col, a); }' });
-  const pts = new THREE.Points(g, mat); pts.frustumCulled = false; pts.renderOrder = 3; scene.add(pts);
+// all soft particles (breath, spindrift, spray sheets, powder clouds, slush, sparkle) share one pool: one buffer, one draw call
+const PP = (() => {
+  const N = 3200, pos = new Float32Array(N * 3), al = new Float32Array(N), sz = new Float32Array(N), col = new Float32Array(N * 3), vel = new Float32Array(N * 3), life = new Float32Array(N), max = new Float32Array(N), s0 = new Float32Array(N), s1 = new Float32Array(N), a0 = new Float32Array(N), sys = new Uint8Array(N);
   for (let i = 0; i < N; i++) pos[i * 3 + 1] = -1e5;
-  const P = { pts, head: 0, add(x, y, z, vx, vy, vz, l, sa, sb, a) { const i = P.head = (P.head + 1) % N; pos.set([x, y, z], i * 3); vel.set([vx, vy, vz], i * 3); life[i] = max[i] = l; s0[i] = sa; s1[i] = sb; a0[i] = a; },
-    update(dt, drag = 0.4, lift = 0) {
-      mat.uniforms.uH.value = renderer.domElement.height * 0.5;
-      for (let i = 0; i < N; i++) {
-        if (life[i] <= 0) { al[i] = 0; continue; }
-        life[i] -= dt; const t = 1 - life[i] / max[i], b = i * 3;
-        vel[b] *= 1 - drag * dt; vel[b + 2] *= 1 - drag * dt; vel[b + 1] += lift * dt;
-        pos[b] += vel[b] * dt; pos[b + 1] += vel[b + 1] * dt; pos[b + 2] += vel[b + 2] * dt;
-        sz[i] = s0[i] + (s1[i] - s0[i]) * t; al[i] = a0[i] * Math.min(1, t * 6) * (1 - t);
-      }
-      g.attributes.position.needsUpdate = true; g.attributes.aA.needsUpdate = true; g.attributes.aS.needsUpdate = true;
-    } };
-  return P;
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('aA', new THREE.BufferAttribute(al, 1)); g.setAttribute('aS', new THREE.BufferAttribute(sz, 1)); g.setAttribute('aC', new THREE.BufferAttribute(col, 3));
+  const mat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, uniforms: { uH: { value: 400 }, map: { value: softDot() } },
+    vertexShader: 'attribute float aA; attribute float aS; attribute vec3 aC; uniform float uH; varying float vA; varying vec3 vC; void main(){ vA = aA; vC = aC; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; gl_PointSize = aA > 0.001 ? aS * projectionMatrix[1][1] * uH / max(0.1, -mv.z) : 0.0; }',
+    fragmentShader: 'uniform sampler2D map; varying float vA; varying vec3 vC; void main(){ float a = texture2D(map, gl_PointCoord).a * vA; if (a < 0.01) discard; gl_FragColor = vec4(vC, a); }' });
+  const pts = new THREE.Points(g, mat); pts.frustumCulled = false; pts.renderOrder = 3; scene.add(pts);
+  return { N, pos, al, sz, col, vel, life, max, s0, s1, a0, sys, g, mat, head: 0, live: 0, systems: [] };
+})();
+function makePuffs(n, color) {
+  const id = PP.systems.length, c = new THREE.Color(color); PP.systems.push({ drag: 0.4, lift: 0 });
+  return {
+    add(x, y, z, vx, vy, vz, l, sa, sb, a) {
+      const i = PP.head = (PP.head + 1) % PP.N, b = i * 3;
+      PP.pos[b] = x; PP.pos[b + 1] = y; PP.pos[b + 2] = z; PP.vel[b] = vx; PP.vel[b + 1] = vy; PP.vel[b + 2] = vz; PP.col[b] = c.r; PP.col[b + 1] = c.g; PP.col[b + 2] = c.b;
+      PP.life[i] = PP.max[i] = l; PP.s0[i] = sa; PP.s1[i] = sb; PP.a0[i] = a; PP.sys[i] = id; PP.live = 2;
+    },
+    update(dt, drag = 0.4, lift = 0) { const s = PP.systems[id]; s.drag = drag; s.lift = lift; },
+  };
+}
+function updatePuffPool(dt) {
+  if (!PP.live) return;                                                                  // nothing alive: no work, no upload
+  PP.mat.uniforms.uH.value = renderer.domElement.height * 0.5;
+  const { pos, vel, life, max, s0, s1, a0, al, sz, sys, systems } = PP; let alive = 0;
+  for (let i = 0; i < PP.N; i++) {
+    if (life[i] <= 0) { if (al[i] !== 0) al[i] = 0; continue; }
+    alive++; life[i] -= dt; const t = 1 - life[i] / max[i], b = i * 3, S_ = systems[sys[i]], dr = 1 - S_.drag * dt;
+    vel[b] *= dr; vel[b + 2] *= dr; vel[b + 1] += S_.lift * dt;
+    pos[b] += vel[b] * dt; pos[b + 1] += vel[b + 1] * dt; pos[b + 2] += vel[b + 2] * dt;
+    sz[i] = s0[i] + (s1[i] - s0[i]) * t; al[i] = life[i] > 0 ? a0[i] * Math.min(1, t * 6) * (1 - t) : 0;
+  }
+  const A = PP.g.attributes; A.position.needsUpdate = A.aA.needsUpdate = A.aS.needsUpdate = A.aC.needsUpdate = true;
+  if (!alive) PP.live--;                                                                 // one more upload to clear, then sleep
 }
 function buildWindFx() {
   const geo = new THREE.SphereGeometry(1, 14, 7, 0, Math.PI * 2, 0, Math.PI / 2);
@@ -4378,23 +4421,29 @@ function buildWindFx() {
   WIND.corn.castShadow = true; WIND.corn.receiveShadow = true; WIND.corn.count = 0; WIND.corn.frustumCulled = false; scene.add(WIND.corn);
   WIND.drift = makePuffs(900, '#f4f8ff');
 }
-function scanRidges() { // ridge crests near you with a steep drop on the lee side get a cornice; spindrift blows off them
+function scanRidges() { // start a scan; stepRidges() works through it a few rows per frame so the game never hitches
   WIND.cx = S.p.x; WIND.cz = S.p.z; WIND.ra = WIND.a;
-  const wx = windVec.x, wz = windVec.z, R = [], M = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(0, 0, 0, 'YXZ'), p = new THREE.Vector3(), sc = new THREE.Vector3();
-  const gx0 = Math.round(S.p.x / 30) * 30, gz0 = Math.round(S.p.z / 30) * 30;
-  const seen = new Set();
-  for (let gz = -900; gz <= 900; gz += 36) for (let gx = -900; gx <= 900; gx += 36) {
-    const ax = gx0 + gx, az = gz0 + gz; if (!inMap(ax, az) || hBase(ax, az) < 2050) continue;
-    let bx = ax, bz = az, bh = -1e9;                                                  // walk along the wind to the crest
-    for (let t = -28; t <= 28; t += 4) { const x = ax + wx * t, z = az + wz * t, h = hBase(x, z); if (h > bh) { bh = h; bx = x; bz = z; } }
-    if (bh < 2150) continue;
-    const key = Math.round(bx / 14) + ',' + Math.round(bz / 14); if (seen.has(key)) continue;
-    const hl = hBase(bx + wx * 16, bz + wz * 16), hw = hBase(bx - wx * 16, bz - wz * 16);
-    if (bh - hl < 6 || bh - hw < 1.5 || pmAt(bx, bz) > 0.15) continue;
-    seen.add(key); R.push({ x: bx, z: bz, y: bh });
+  WIND.job = { wx: windVec.x, wz: windVec.z, R: [], seen: new Set(), gz: -900, gx0: Math.round(S.p.x / 30) * 30, gz0: Math.round(S.p.z / 30) * 30 };
+}
+function stepRidges(budgetMs) {
+  const J = WIND.job, t0 = performance.now(), wx = J.wx, wz = J.wz;
+  while (J.gz <= 900 && performance.now() - t0 < budgetMs) {
+    const gz = J.gz; J.gz += 36;
+    for (let gx = -900; gx <= 900; gx += 36) {
+      const ax = J.gx0 + gx, az = J.gz0 + gz; if (!inMap(ax, az) || hBase(ax, az) < 2050) continue;
+      let bx = ax, bz = az, bh = -1e9;
+      for (let t = -28; t <= 28; t += 4) { const x = ax + wx * t, z = az + wz * t, h = hBase(x, z); if (h > bh) { bh = h; bx = x; bz = z; } }
+      if (bh < 2150) continue;
+      const key = Math.round(bx / 14) + ',' + Math.round(bz / 14); if (J.seen.has(key)) continue;
+      const hl = hBase(bx + wx * 16, bz + wz * 16), hw = hBase(bx - wx * 16, bz - wz * 16);
+      if (bh - hl < 6 || bh - hw < 1.5 || pmAt(bx, bz) > 0.15) continue;
+      J.seen.add(key); J.R.push({ x: bx, z: bz, y: bh });
+    }
   }
-  WIND.ridges = R; let n = 0;
-  for (const r of R) {
+  if (J.gz <= 900) return;
+  WIND.job = null; WIND.ridges = J.R;
+  const M = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(0, 0, 0, 'YXZ'), p = new THREE.Vector3(), sc = new THREE.Vector3(); let n = 0;
+  for (const r of J.R) {
     if (n >= 260) break; if (hash(Math.round(r.x), Math.round(r.z), 9) < 0.3) continue;
     const len = 6 + hash(Math.round(r.x), Math.round(r.z), 10) * 6, cxp = r.x + wx * 1.6, czp = r.z + wz * 1.6;
     e.set(0.18, Math.atan2(wx, wz), 0); q.setFromEuler(e);
@@ -4410,7 +4459,7 @@ function updateWind(dt) {
   windVec.set(Math.cos(WIND.a), 0, Math.sin(WIND.a));
   const want = base * (1 + Math.max(0, camera.position.y - 2000) / 1200) * (0.85 + 0.3 * Math.sin(performance.now() * 0.0007));
   WIND.v += (want - WIND.v) * Math.min(1, dt * 0.5);
-  if (gameStarted && (Math.hypot(S.p.x - WIND.cx, S.p.z - WIND.cz) > 500 || Math.abs(WIND.a - WIND.ra) > 0.25)) scanRidges();
+  if (WIND.job) stepRidges(1.5); else if (gameStarted && (Math.hypot(S.p.x - WIND.cx, S.p.z - WIND.cz) > 500 || Math.abs(WIND.a - WIND.ra) > 0.25)) scanRidges();
   // spindrift streaming off the crests
   if (WIND.v > 6.5 && WIND.ridges.length && !window.__game.paused) {
     WIND.emitAcc += dt * (WIND.v - 6.5) * 45;
@@ -4584,7 +4633,7 @@ function cloudLayerApply() {
 }
 // ---------- camera modes: follow, first person (goggles), high, helmet cam, GoPro on a pole (fisheye) ----------
 const CAM_NAMES = ['Camera: follow', 'Camera: first person', 'Camera: high', 'Camera: helmet cam', 'Camera: GoPro on a pole'];
-const _ac1 = new THREE.Vector3(), _ac2 = new THREE.Vector3(), _ac3 = new THREE.Vector3(), _ac4 = new THREE.Vector3(), _acq = new THREE.Quaternion(), ACAM = { p: new THREE.Vector3(), init: false };
+const _ac5 = new THREE.Vector3(), _ac1 = new THREE.Vector3(), _ac2 = new THREE.Vector3(), _ac3 = new THREE.Vector3(), _ac4 = new THREE.Vector3(), _acq = new THREE.Quaternion(), ACAM = { p: new THREE.Vector3(), init: false };
 function actionCam(dt) {
   const src = RAG.active && RAG.vis ? RAG.vis.head : rig.neck;
   src.updateWorldMatrix(true, false); src.getWorldPosition(_ac1); src.getWorldQuaternion(_acq);
@@ -4593,11 +4642,11 @@ function actionCam(dt) {
   if (camMode === 3) { // on top of the helmet, looking past your ski tips
     camera.position.copy(_ac1).addScaledVector(up, 0.32).addScaledVector(fwd, 0.04);
     const yawF = _ac4.set(Math.sin(S.yaw), 0, Math.cos(S.yaw));
-    camera.lookAt(_ac4.copy(camera.position).addScaledVector(yawF, 10).add(new THREE.Vector3(0, -4.2, 0)));
+    camera.lookAt(_ac4.copy(camera.position).addScaledVector(yawF, 10).add(_ac5.set(0, -4.2, 0)));
     fov = 95; ACAM.init = false;
   } else { // held out in front and to the side on a pole, looking back at you
     const yawF = _ac4.set(Math.sin(S.yaw + 0.55), 0, Math.cos(S.yaw + 0.55));
-    const want = new THREE.Vector3().copy(_ac1).addScaledVector(yawF, 1.9); want.y += 0.25;
+    const want = _ac5.copy(_ac1).addScaledVector(yawF, 1.9); want.y += 0.25;
     if (!ACAM.init || ACAM.p.distanceToSquared(want) > 100) { ACAM.p.copy(want); ACAM.init = true; } else ACAM.p.lerp(want, 1 - Math.exp(-dt * 12));
     ACAM.p.y = Math.max(ACAM.p.y, hAt(ACAM.p.x, ACAM.p.z) + 0.3);
     camera.position.copy(ACAM.p); camera.lookAt(_ac1.x, _ac1.y - 0.35, _ac1.z);
@@ -4683,7 +4732,7 @@ function restartRun() {
 // ---------- key bindings ----------
 const ACTIONS = [['steerL', 'Steer left', 'KeyA'], ['steerR', 'Steer right', 'KeyD'], ['tuck', 'Tuck / skate', 'KeyW'], ['brake', 'Pizza (brake)', 'KeyS'], ['hockey', 'Hockey stop', 'KeyQ'], ['jump', 'Jump', 'Space'], ['grab', 'Grab (in the air)', 'ShiftLeft'],
   ['lift', 'Ride the lift', 'KeyE'], ['ff', 'Fast-forward lift', 'KeyF'], ['up', 'Get up', 'KeyR'], ['restart', 'Restart the run', 'Backspace'], ['skis', 'Skis on / off', 'KeyK'], ['skins', 'Skins on / off', 'KeyG'],
-  ['beacon', 'Transceiver drill', 'KeyB'], ['probe', 'Probe / dig', 'KeyP'], ['tele', 'Teleport', 'KeyT'], ['map', 'Map', 'KeyM'], ['cam', 'Camera', 'KeyC'], ['ward', 'Wardrobe', 'KeyO'], ['replay', 'Replay', 'KeyV'], ['slowmo', 'Slow motion (hold)', 'KeyX']];
+  ['beacon', 'Transceiver drill', 'KeyB'], ['probe', 'Probe / dig', 'KeyP'], ['tele', 'Teleport', 'KeyT'], ['map', 'Map', 'KeyM'], ['cam', 'Camera', 'KeyC'], ['ward', 'Wardrobe', 'KeyO'], ['replay', 'Replay', 'KeyV'], ['slowmo', 'Slow motion (hold)', 'KeyX'], ['photo', 'Photo mode', 'KeyH']];
 const BINDS = { map: new Map(), defaults: new Set(ACTIONS.map(a => a[2])), capture: null };
 function rebuildBinds() { BINDS.map.clear(); for (const [id, , def] of ACTIONS) BINDS.map.set((settings.binds || {})[id] || def, def); }
 function vcode(code) { return BINDS.map.has(code) ? BINDS.map.get(code) : BINDS.defaults.has(code) ? null : code; }
@@ -4767,6 +4816,7 @@ function drawMiniLabels() {
     if (x < 10 || y < 10 || x > 430 || y > 430) continue; if (!free(x, y, 26, 22)) continue;
     c.fillStyle = diffOf(p.d).col; c.fillRect(x - 12, y - 10, 24, 20); c.fillStyle = '#fff'; c.font = 'bold 13px system-ui'; c.fillText(String(p.r).slice(0, 3), x, y + 1);
   }
+  drawTourRoutes(c, X, Y, 3, (x, z) => Math.abs(x - S.p.x) < miniSpan * 0.6 && Math.abs(z - S.p.z) < miniSpan * 0.6);
   if (miniSpan < 3500) for (const r of restaurants) { if (!r.name) continue; const x = X(r.cx), y = Y(r.cz); if (x < 0 || y < 0 || x > 440 || y > 440) continue; label('🍴 ' + r.name.slice(0, 18), x, y + 14, '600 13px system-ui', '#5a3a22'); }
 }
 const _cmpD = new THREE.Vector3(), COMPASS = { cv: null, ctx: null };
@@ -4791,11 +4841,12 @@ function drawCompass() {
   const cx = camera.position.x, cz = camera.position.z, M = [];
   for (const l of lifts) { if (l.spec.carrier === 'none') continue; const d = Math.hypot(l.top.x - cx, l.top.z - cz); if (d < 4000 && d > 60) M.push({ x: l.top.x, z: l.top.z, d, t: l.name.replace(/\s*\(.*\)/, ''), col: '#7fc3ff', ic: '▲' }); }
   for (const r of restaurants) { if (!r.name) continue; const d = Math.hypot(r.cx - cx, r.cz - cz); if (d < 2500 && d > 30) M.push({ x: r.cx, z: r.cz, d, t: r.name, col: '#ffcf8a', ic: '●' }); }
+  if (TOUR.active) M.unshift({ x: TOUR.active.x, z: TOUR.active.z, d: 0, t: TOUR.active.name + ' ' + TOUR.active.ele + ' m', col: '#ff6ad5', ic: '⛰', dd: Math.hypot(TOUR.active.x - cx, TOUR.active.z - cz) });
   M.sort((a, b) => a.d - b.d); const used = [];
   for (const m of M.slice(0, 14)) {
     const r = rel(Math.atan2(m.x - cx, -(m.z - cz)) * 180 / Math.PI); if (Math.abs(r) > span / 2 - 3) continue;
     const x = Wc / 2 + r * ppd; if (used.some(u => Math.abs(u - x) < 130)) continue; used.push(x);
-    c.font = '600 13px system-ui'; c.fillStyle = m.col; c.fillText(`${m.ic} ${m.t.slice(0, 16)} · ${m.d > 950 ? (m.d / 1000).toFixed(1) + ' km' : Math.round(m.d / 10) * 10 + ' m'}`, x, 62);
+    c.font = '600 13px system-ui'; c.fillStyle = m.col; c.fillText(`${m.ic} ${m.t.slice(0, m.dd ? 26 : 16)} · ${(m.dd || m.d) > 950 ? ((m.dd || m.d) / 1000).toFixed(1) + ' km' : Math.round((m.dd || m.d) / 10) * 10 + ' m'}`, x, 62);
   }
 }
 // ---------- skier profiles ----------
@@ -4991,17 +5042,17 @@ function replayFrame(dt) {
   }
   if (REPLAY.el) { $('rtime').textContent = `${REPLAY.t.toFixed(1)} / ${dur.toFixed(1)} s · ${Math.round(REPLAY.spd * 3.6)} km/h`; $('rfill').style.width = (REPLAY.t / dur * 100) + '%'; }
 }
-const _rpq = new THREE.Quaternion(), _rv4 = new THREE.Vector3(), _rv5 = new THREE.Vector3();
+const _rcd = new THREE.Vector3(), _rcs = new THREE.Vector3(), _rcw = new THREE.Vector3(), _rpq = new THREE.Quaternion(), _rv4 = new THREE.Vector3(), _rv5 = new THREE.Vector3();
 function replayDir(out) { // direction of travel around the current replay time
   const F = REPLAY.frames, n = F.length, i = clamp(Math.floor(REPLAY.t * REPLAY.hz), 0, n - 1), i0 = Math.max(0, i - 6), i1 = Math.min(n - 1, i + 6);
   out.set(F[i1][8] - F[i0][8], 0, F[i1][10] - F[i0][10]); if (out.lengthSq() < 0.01) { const q = _rpq.set(F[i][4], F[i][5], F[i][6], F[i][7]); out.set(0, 0, 1).applyQuaternion(q); out.y = 0; } return out.normalize();
 }
 function replayCam(dt) {
   const tgt = _rv4; if (REPLAY.rag && RAG.vis) RAG.vis.hips.getWorldPosition(tgt); else tgt.copy(rig.root.position).add(_rv5.set(0, 1.0, 0));
-  const dir = replayDir(new THREE.Vector3()), side = new THREE.Vector3(dir.z, 0, -dir.x);
+  const dir = replayDir(_rcd), side = _rcs.set(dir.z, 0, -dir.x);
   REPLAY.camT += dt;
   if (REPLAY.camAuto && REPLAY.camT > 4.5) { REPLAY.camT = 0; REPLAY.cam = (REPLAY.cam + 1 + Math.floor(Math.random() * 2)) % RCAMS.length; REPLAY.tri = null; REPLAY.init = false; replayUIcam(); }
-  const want = new THREE.Vector3(); let fov = 62, snap = !REPLAY.init;
+  const want = _rcw; let fov = 62, snap = !REPLAY.init;
   switch (RCAMS[REPLAY.cam]) {
     case 'Tripod': {
       if (!REPLAY.tri || REPLAY.tri.distanceTo(tgt) > 45) {   // set up beside where you are about to go
@@ -5069,18 +5120,20 @@ function busyNow() {
 }
 // lift queues at the loading areas near you; they shuffle forward each time a chair or cabin leaves
 const QUEUE = { cache: new Map() };
-function drawQueues(n, put) {
-  const b = busyNow(); if (b < 0.05 || !liftsRunning()) return n;
-  for (const l of lifts) {
-    if (n >= 138) break;
+function drawQueues(cnt, put) { // cnt(): how many skiers are drawn so far (put() counts them)
+  const b = busyNow(); if (b < 0.05 || !liftsRunning()) return;
+  if (!QUEUE.near || performance.now() - QUEUE.nearT > 1000) { QUEUE.nearT = performance.now(); QUEUE.near = lifts.filter(l => Math.abs(l.bottom.x - S.p.x) < 470 && Math.abs(l.bottom.z - S.p.z) < 470); }
+  for (const l of QUEUE.near) {
+    if (cnt() >= 138) break;
     const c = l.spec.carrier; if (c === 'none' || c === 'funicular' || !liftOpen(l)) continue;
     if (Math.abs(l.bottom.x - S.p.x) > 450 || Math.abs(l.bottom.z - S.p.z) > 450) continue;
     let q = QUEUE.cache.get(l);
     if (!q) { const pt = new THREE.Vector3(), dir = new THREE.Vector3(); pathAt(l.up, loadS(l), pt, dir); const hl = Math.hypot(dir.x, dir.z) || 1; q = { x: pt.x, z: pt.z, fx: dir.x / hl, fz: dir.z / hl, outs: [], ok: [], sc: [] }; QUEUE.cache.set(l, q); }
     const size = Math.round(b * (c === 'cablecar' ? 22 : c === 'gondola' ? 14 : l.spec.drag ? 8 : 12) * (0.6 + 0.8 * hash(Math.round(l.top.x), 3, 21)));
     const period = l.spec.spacing ? l.spec.spacing / l.spec.speed : 90, step = sstep(0, 0.3, (liftClock % period) / period);
-    const ab = c === 'chair' ? 3 : 2, back = c === 'cablecar' || c === 'gondola' ? 5 : 3.5;
-    for (let k = 0; k < size && n < 138; k++) {
+    if (q.back === undefined) { let bk = c === 'cablecar' || c === 'gondola' ? 5 : 3.5; while (bk < 70 && hitObstacle(q.x - q.fx * bk, q.z - q.fz * bk, hAt(q.x - q.fx * bk, q.z - q.fz * bk) + 0.5)) bk += 2; q.back = bk + 1; }   // enclosed stations: queue from the entrance
+    const ab = c === 'chair' ? 3 : 2, back = q.back;
+    for (let k = 0; k < size && cnt() < 138; k++) {
       const row = Math.floor(k / ab), col = k % ab, s = back + row * 1.45 - step * 1.45, lat = (col - (ab - 1) / 2) * 0.95;
       const x = q.x - q.fx * s - q.fz * lat, z = q.z - q.fz * s + q.fx * lat;
       if (q.ok[k] === undefined) q.ok[k] = !hitObstacle(x, z, hAt(x, z) + 0.5) && !hitObstacle(x - q.fx * 1.5, z - q.fz * 1.5, hAt(x, z) + 0.5);
@@ -5089,7 +5142,6 @@ function drawQueues(n, put) {
       put({ x, y: hAt(x, z), z, yaw: Math.atan2(q.fx, q.fz) + (hash(k, 5, Math.round(liftClock / 7)) - 0.5) * 0.4, lean: 0, fallen: 0 }, q.outs[k], q.sc[k]);
     }
   }
-  return n;
 }
 // ---------- sounds per gear ----------
 const GEARSND = () => ({ allmtn: { f: 1, g: 1 }, slalom: { f: 1.3, g: 1.1 }, powder: { f: 0.78, g: 0.8 }, touring: { f: 1.12, g: 0.85 }, board: { f: 0.62, g: 1.2 } })[settings.equip] || { f: 1, g: 1 };
@@ -5200,7 +5252,7 @@ function drawLoadingArt() {
   const layers = [[0.47, 0.3, '#d7e2f0', '#9db0cb'], [0.57, 0.26, '#e6eef7', '#8ca3c3'], [0.68, 0.19, '#f3f7fc', '#93aacb'], [0.82, 0.1, '#fdfeff', '#b4c5dc']];
   for (const [b, amp, snow, shade] of layers) {
     const N = 257, raw = ridge(0, 1, 0.52), pk = 1.6 + rnd() * 2;                      // a few big peaks, rough on top
-    const h = Array.from(raw, (v, i) => { const t = i / (N - 1); return Hd * b - Hd * amp * (0.35 + 0.65 * Math.pow(Math.abs(Math.sin(t * Math.PI * pk + rnd() * 0.02)), 1.6)) * (0.75 + 0.25 * (-v)); });
+    const h = Array.from(raw, (v, i) => { const t = i / (N - 1); return Hd * b - Hd * amp * (0.35 + 0.65 * Math.pow(1 - Math.abs(Math.cos(t * Math.PI * pk + rnd() * 0.02)), 1.25)) * (0.75 + 0.25 * (-v)); });
     const X = i => i / (N - 1) * Wd, top = Math.min(...h);
     const g = c.createLinearGradient(0, top, 0, Hd * Math.min(1, b + 0.2)); g.addColorStop(0, snow); g.addColorStop(1, shade);
     c.beginPath(); c.moveTo(0, Hd); for (let i = 0; i < N; i++) c.lineTo(X(i), h[i]); c.lineTo(Wd, Hd); c.closePath(); c.fillStyle = g; c.fill();
@@ -5223,6 +5275,262 @@ function updatePolish(dt) {
   recordReplay(dt); sprayFx(dt); updateSkiSnow(dt); updateContactShadows(); updateHeadLook(dt);
 }
 const _rollAx = new THREE.Vector3();
+
+// ================= ski touring summits, photo mode + album + time-lapse, touch controls =================
+// ---------- ski tours: marked uphill routes (pink poles, as in Switzerland) from a lift to a real summit with a cross and a summit book ----------
+const TOUR = { list: [], active: null, t0: 0, checkT: 0, poles: null };
+const TOUR_KEY = 'arosa-davos-summits';
+const tourBook = () => { try { return JSON.parse(localStorage.getItem(TOUR_KEY) || '{}'); } catch (e) { return {}; } };
+function tourPath(sx, sz, tx, tz) { // zigzag uphill: keep the climb at a skinnable grade, long traverses, switchbacks where it is steep
+  const P = [[sx, sz]]; let x = sx, z = sz, side = 1, run = 0;
+  for (let k = 0; k < 600; k++) {
+    const dx = tx - x, dz = tz - z, d = Math.hypot(dx, dz); if (d < 24) { P.push([tx, tz]); return P; }
+    const base = Math.atan2(dx, dz), h0 = hBase(x, z); let bs = 1e9, bx = x, bz = z, bo = 0;
+    for (let o = -80; o <= 80; o += 10) {
+      const a = base + o * Math.PI / 180, nx = x + Math.sin(a) * 16, nz = z + Math.cos(a) * 16, g = (hBase(nx, nz) - h0) / 16;
+      let sc = Math.abs(o) / 40; if (g > 0.42) sc += (g - 0.42) * 25; if (g < -0.05) sc += (-0.05 - g) * 10; if (o && Math.sign(o) === side) sc -= 0.35; if (hitObstacle(nx, nz, -1e9)) sc += 50;
+      if (sc < bs) { bs = sc; bx = nx; bz = nz; bo = o; }
+    }
+    if (bo && Math.sign(bo) === side) { if (++run > 9) { side = -side; run = 0; } }
+    x = bx; z = bz; P.push([x, z]);
+  }
+  return Math.hypot(tx - x, tz - z) < 120 ? (P.push([tx, tz]), P) : null;
+}
+function buildTours() {
+  const pk = peaks.filter(p => p.name && (p.ele || 0) >= 2350).sort((a, b) => b.ele - a.ele), used = [];
+  for (const p of pk) {
+    if (TOUR.list.length >= 18) break;
+    if (used.some(u => Math.hypot(u.x - p.x, u.z - p.z) < 1500)) continue;
+    const top = hBase(p.x, p.z); let best = null, bd = 1e9;
+    for (const l of lifts) for (const e of [l.top, l.bottom]) { const dh = top - e.y, d = Math.hypot(e.x - p.x, e.z - p.z); if (dh < 250 || dh > 1000 || d > 3500 || d < 400) continue; if (d < bd) { bd = d; best = { x: e.x, z: e.z, y: e.y, lift: l.name }; } }
+    if (!best) continue;
+    const dl = Math.hypot(p.x - best.x, p.z - best.z), sx = best.x + (p.x - best.x) / dl * 25, sz = best.z + (p.z - best.z) / dl * 25;
+    const path = tourPath(sx, sz, p.x, p.z); if (!path) continue;
+    let len = 0; for (let i = 1; i < path.length; i++) len += Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]);
+    TOUR.list.push({ name: p.name, ele: p.ele || Math.round(top), x: p.x, z: p.z, y: top, start: best, path, len, climb: Math.round(top - hBase(sx, sz)) }); used.push(p);
+  }
+  // pink route poles and the summit crosses
+  const poles = [];
+  for (const t of TOUR.list) {
+    let acc = 0;
+    for (let i = 1; i < t.path.length; i++) { const [ax, az] = t.path[i - 1], [bx, bz] = t.path[i], L = Math.hypot(bx - ax, bz - az); acc += L; if (acc >= 45) { acc = 0; poles.push([bx + 1.2, hAt(bx + 1.2, bz), bz]); } }
+    const y = hAt(t.x, t.z), S_ = ch(t.x, t.z).solid;
+    S_.rod(t.x, y - 0.4, t.z, t.x, y + 3.6, t.z, 0.09, '#5b3d24'); S_.rod(t.x - 0.85, y + 2.6, t.z, t.x + 0.85, y + 2.6, t.z, 0.08, '#5b3d24');
+    S_.box(t.x + 0.18, y + 1.3, t.z, 0.2, 0.26, 0.14, '#9aa1a8');                                   // the summit book's tin box
+  }
+  const pg = new THREE.CylinderGeometry(0.04, 0.04, 1.8, 6).translate(0, 0.9, 0);
+  TOUR.poles = new THREE.InstancedMesh(pg, new THREE.MeshLambertMaterial({ color: '#e0379a' }), Math.max(1, poles.length));
+  const M = new THREE.Matrix4(); poles.forEach((p, i) => { M.makeTranslation(p[0], p[1] - 0.2, p[2]); TOUR.poles.setMatrixAt(i, M); });
+  TOUR.poles.count = poles.length; TOUR.poles.castShadow = true; scene.add(TOUR.poles);
+  console.log(`ski tours: ${TOUR.list.length} summits, ${poles.length} route poles`);
+}
+function tourStart(t) {
+  settings.equip = 'touring'; saveSettings(); applyGear();
+  const [x, z] = t.path[0], [x2, z2] = t.path[Math.min(2, t.path.length - 1)];
+  placeAt(x, z, Math.atan2(x2 - x, z2 - z)); S.skins = true; TOUR.active = t; TOUR.t0 = performance.now(); t.reached = false;
+  flash(`Ski tour to ${t.name} (${t.ele} m): ↑ ${t.climb} m, ${(t.len / 1000).toFixed(1)} km — follow the pink poles. Skins are on: W to climb`, 5);
+}
+function updateTours(dt) {
+  TOUR.checkT -= dt; if (TOUR.checkT > 0 || !gameStarted) return; TOUR.checkT = 0.5;
+  for (const t of TOUR.list) {
+    if (t.reached || Math.hypot(t.x - S.p.x, t.z - S.p.z) > 35 || S.p.y < t.y - 25) continue;
+    t.reached = true;
+    const secs = TOUR.active === t ? Math.round((performance.now() - TOUR.t0) / 1000) : 0, book = tourBook(), e = book[t.name] || { n: 0 };
+    e.n++; e.last = Date.now(); if (secs && (!e.best || secs < e.best)) e.best = secs; book[t.name] = e;
+    try { localStorage.setItem(TOUR_KEY, JSON.stringify(book)); } catch (er) { }
+    flash(`Summit! ${t.name}, ${t.ele} m${secs ? ` — climbed in ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}` : ''}. You signed the summit book (${e.n}×). Press H for a summit photo`, 6);
+    if (TOUR.active === t) TOUR.active = null;
+  }
+}
+function tourMenuColumn(cols) {
+  if (!TOUR.list.length) return;
+  const col = document.createElement('div'), book = tourBook(); col.innerHTML = '<h3>Ski tours (touring skis, skins on)</h3>';
+  for (const t of TOUR.list) { const b = document.createElement('button'), e = book[t.name]; b.innerHTML = `<span>⛰ ${escH(t.name)}</span><span>${t.ele} m · ↑${t.climb} m${e ? ' · ✓' + e.n : ''}</span>`; b.onclick = () => { tourStart(t); $('tele').style.display = 'none'; }; col.appendChild(b); }
+  cols.appendChild(col);
+}
+function drawTourRoutes(c, X, Y, lw, inView) {
+  c.save(); c.strokeStyle = '#e0379a'; c.lineWidth = lw; c.setLineDash([lw * 2.5, lw * 1.6]);
+  for (const t of TOUR.list) { if (!t.path.some(([x, z]) => inView(x, z))) continue; c.beginPath(); t.path.forEach(([x, z], i) => i ? c.lineTo(X(x), Y(z)) : c.moveTo(X(x), Y(z))); c.stroke(); }
+  c.restore();
+}
+// ---------- photo mode: free camera, lens, exposure, depth of field, filters, frames and captions; pictures go to the album ----------
+const PHOTO = { on: false, rt: null, scene: null, cam: null, mat: null, panel: null, frameCv: null, pan: new THREE.Vector3(), saved: null, look: new THREE.Vector3(),
+  opts: { fov: 50, exp: 1, dof: 0.35, focus: 0, filter: 0, vig: 0.3, roll: 0, frame: 'none', caption: '', hide: false } };
+const FILTERS = ['None', 'Vivid', 'Black & white', 'Warm', 'Cool', 'Vintage'], FRAMES = [['none', 'No frame'], ['postcard', 'Postcard'], ['polaroid', 'Instant photo'], ['film', 'Film strip'], ['vintage', 'Old print']];
+const TL = { on: false, start: 0, el: null };
+function photoStart() {
+  if (PHOTO.on || REPLAY.on || !gameStarted) return;
+  if (isMenuOpen()) hideMenu();
+  PHOTO.on = true; window.__game.paused = true; document.body.classList.add('photomode');
+  const tgt = _ph1.copy(rig.root.position).add(_ph2.set(0, 1, 0)), off = _ph2.copy(camera.position).sub(tgt);
+  PHOTO.saved = { yaw: orbitYaw, pitch: orbitPitch, dist: camDistT, fov: camera.fov, mode: camMode };
+  orbitYaw = Math.atan2(off.x, off.z); orbitPitch = clamp(Math.asin(off.y / Math.max(0.1, off.length())), -0.2, 1.3); camDistT = camDist = clamp(off.length(), 1.2, 40); PHOTO.pan.set(0, 0, 0);
+  if (!PHOTO.opts.caption) PHOTO.opts.caption = 'Greetings from ' + regionOf(S.p.x).split(' ')[0];
+  photoPanel(); photoFrame();
+}
+function photoStop() {
+  if (!PHOTO.on) return; if (TL.on) tlStop();
+  PHOTO.on = false; window.__game.paused = false; document.body.classList.remove('photomode'); PHOTO.panel.style.display = 'none'; PHOTO.frameCv.style.display = 'none';
+  Object.assign(PHOTO, {}); orbitYaw = 0; orbitPitch = PHOTO.saved.pitch; camDistT = PHOTO.saved.dist; camMode = PHOTO.saved.mode; camera.fov = settings.fov; camera.updateProjectionMatrix(); camera.up.set(0, 1, 0);
+}
+const _ph1 = new THREE.Vector3(), _ph2 = new THREE.Vector3(), _ph3 = new THREE.Vector3();
+function photoCam(dt) {
+  camDist += (camDistT - camDist) * Math.min(1, dt * 8);
+  const fwd = _ph3.set(-Math.sin(orbitYaw), 0, -Math.cos(orbitYaw)), sp = Math.max(1.5, camDist * 0.8) * dt;
+  if (keys.KeyW) PHOTO.pan.addScaledVector(fwd, sp); if (keys.KeyS) PHOTO.pan.addScaledVector(fwd, -sp);
+  if (keys.KeyA) PHOTO.pan.add(_ph2.set(fwd.z * sp, 0, -fwd.x * sp)); if (keys.KeyD) PHOTO.pan.add(_ph2.set(-fwd.z * sp, 0, fwd.x * sp));
+  if (keys.KeyE) PHOTO.pan.y += sp; if (keys.KeyQ) PHOTO.pan.y -= sp;
+  const tgt = _ph1.copy(rig.root.position).add(_ph2.set(0, 1, 0)).add(PHOTO.pan), cp = Math.cos(orbitPitch);
+  camera.position.set(tgt.x + Math.sin(orbitYaw) * cp * camDist, tgt.y + Math.sin(orbitPitch) * camDist, tgt.z + Math.cos(orbitYaw) * cp * camDist);
+  camera.position.y = Math.max(camera.position.y, hAt(camera.position.x, camera.position.z) + 0.25);
+  camera.up.set(0, 1, 0); camera.lookAt(tgt); camera.rotateZ(PHOTO.opts.roll * Math.PI / 180);
+  if (Math.abs(camera.fov - PHOTO.opts.fov) > 0.01) { camera.fov = PHOTO.opts.fov; camera.updateProjectionMatrix(); }
+  PHOTO.look.copy(tgt);
+}
+function photoRender() {
+  const w = renderer.domElement.width, h = renderer.domElement.height;
+  if (!PHOTO.scene) {
+    PHOTO.scene = new THREE.Scene(); PHOTO.cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    PHOTO.mat = new THREE.ShaderMaterial({ depthTest: false, depthWrite: false,
+      uniforms: { tD: { value: null }, tZ: { value: null }, near: { value: 0.5 }, far: { value: 45000 }, focus: { value: 5 }, dof: { value: 0.3 }, exposure: { value: 1 }, fmode: { value: 0 }, vig: { value: 0.3 }, aspect: { value: 1 } },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+      fragmentShader: `uniform sampler2D tD, tZ; uniform float near, far, focus, dof, exposure, vig, aspect; uniform int fmode; varying vec2 vUv;
+        float lin(float d){ return near * far / (far - d * (far - near)); }
+        void main(){
+          float dc = lin(texture2D(tZ, vUv).x), coc = clamp(abs(dc - focus) / max(focus, 0.5) * 1.5, 0.0, 1.0) * dof;
+          vec3 c = vec3(0.0);
+          for (int i = 0; i < 24; i++) { float a = float(i) * 2.39996, r = sqrt((float(i) + 0.5) / 24.0); c += texture2D(tD, vUv + vec2(cos(a) / aspect, sin(a)) * r * coc * 0.014).rgb; }
+          c /= 24.0; c *= exposure;
+          float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+          if (fmode == 1) { c = mix(vec3(l), c, 1.35); c = (c - 0.5) * 1.08 + 0.5; }
+          else if (fmode == 2) { c = vec3(l); c = (c - 0.5) * 1.12 + 0.5; }
+          else if (fmode == 3) c *= vec3(1.08, 1.0, 0.88);
+          else if (fmode == 4) c *= vec3(0.9, 0.98, 1.1);
+          else if (fmode == 5) { c = mix(c, vec3(l) * vec3(1.07, 0.96, 0.8), 0.7); c = c * 0.86 + 0.06; }
+          vec2 q = vUv - 0.5; c *= 1.0 - vig * smoothstep(0.25, 0.75, length(q * vec2(aspect, 1.0)) / aspect * 1.2);
+          gl_FragColor = vec4(max(c, 0.0), 1.0);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }` });
+    PHOTO.scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), PHOTO.mat));
+  }
+  if (!PHOTO.rt || PHOTO.rt.width !== w || PHOTO.rt.height !== h) { if (PHOTO.rt) PHOTO.rt.dispose(); PHOTO.rt = new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType, depthTexture: new THREE.DepthTexture(w, h) }); }
+  const U = PHOTO.mat.uniforms, o = PHOTO.opts;
+  U.tD.value = PHOTO.rt.texture; U.tZ.value = PHOTO.rt.depthTexture; U.near.value = camera.near; U.far.value = camera.far; U.aspect.value = w / h;
+  U.focus.value = o.focus > 0 ? o.focus : camera.position.distanceTo(PHOTO.look); U.dof.value = o.dof; U.exposure.value = o.exp; U.fmode.value = o.filter; U.vig.value = o.vig;
+  sky.visible = true; renderer.setRenderTarget(PHOTO.rt); renderer.render(scene, camera); renderer.setRenderTarget(null); renderer.render(PHOTO.scene, PHOTO.cam);
+}
+function drawFrame(c, w, h, o) { // postcard frames and captions, drawn over the picture
+  const u = Math.min(w, h) / 100, cap = o.caption || '';
+  if (o.frame === 'postcard') {
+    c.strokeStyle = '#fff'; c.lineWidth = u * 3; c.strokeRect(u * 1.5, u * 1.5, w - u * 3, h - u * 3); c.lineWidth = u * 0.3; c.strokeRect(u * 4, u * 4, w - u * 8, h - u * 8);
+    const sx = w - u * 17, sy = u * 6; c.fillStyle = '#fff'; c.fillRect(sx - u, sy - u, u * 12, u * 14); c.fillStyle = '#d52b1e'; c.fillRect(sx, sy, u * 10, u * 12);
+    c.fillStyle = '#fff'; c.fillRect(sx + u * 4, sy + u * 2.5, u * 2, u * 6); c.fillRect(sx + u * 2, sy + u * 4.5, u * 6, u * 2); c.font = `bold ${u * 1.6}px Arial`; c.textAlign = 'center'; c.fillText('HELVETIA', sx + u * 5, sy + u * 11);
+    c.font = `italic ${u * 6}px "Segoe Script","Brush Script MT",cursive`; c.textAlign = 'left'; c.shadowColor = 'rgba(0,0,0,.55)'; c.shadowBlur = u; c.fillStyle = '#fff'; c.fillText(cap, u * 7, h - u * 8); c.shadowBlur = 0;
+  } else if (o.frame === 'polaroid') {
+    c.fillStyle = '#f7f5ef'; c.fillRect(0, 0, w, u * 4); c.fillRect(0, 0, u * 4, h); c.fillRect(w - u * 4, 0, u * 4, h); c.fillRect(0, h - u * 16, w, u * 16);
+    c.font = `${u * 5}px "Segoe Script","Brush Script MT",cursive`; c.fillStyle = '#2a3a5a'; c.textAlign = 'center'; c.fillText(cap, w / 2, h - u * 6);
+  } else if (o.frame === 'film') {
+    c.fillStyle = '#111'; c.fillRect(0, 0, w, u * 9); c.fillRect(0, h - u * 9, w, u * 9); c.fillStyle = '#e8e2d0';
+    for (let x = u * 2; x < w; x += u * 6) { c.fillRect(x, u * 2.5, u * 3, u * 4); c.fillRect(x, h - u * 6.5, u * 3, u * 4); }
+    c.fillStyle = '#f2a33a'; c.font = `bold ${u * 2}px monospace`; c.textAlign = 'left'; c.fillText('ARO 400  ▸ 12', u * 3, h - u * 0.8); c.textAlign = 'right'; c.fillText(cap.toUpperCase(), w - u * 3, u * 1.9 + u * 0.4);
+  } else if (o.frame === 'vintage') {
+    c.strokeStyle = '#efe6d2'; c.lineWidth = u * 8; c.beginPath(); c.roundRect ? c.roundRect(u * 2, u * 2, w - u * 4, h - u * 4, u * 6) : c.rect(u * 2, u * 2, w - u * 4, h - u * 4); c.stroke();
+    c.font = `italic ${u * 4}px Georgia, serif`; c.fillStyle = '#5b4630'; c.textAlign = 'center'; c.fillText(cap, w / 2, h - u * 1.6);
+  } else if (cap && o.frame !== 'none') { }
+}
+function photoFrame() { // live preview of the frame
+  if (!PHOTO.frameCv) { PHOTO.frameCv = document.createElement('canvas'); PHOTO.frameCv.id = 'photoFrame'; document.body.appendChild(PHOTO.frameCv); }
+  const cv = PHOTO.frameCv, dpr = Math.min(2, devicePixelRatio || 1); cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; cv.style.display = 'block';
+  const c = cv.getContext('2d'); c.clearRect(0, 0, cv.width, cv.height); drawFrame(c, cv.width, cv.height, PHOTO.opts);
+}
+async function photoTake() {
+  photoRender();
+  const src = renderer.domElement, sc = Math.min(1, 1920 / src.width), w = Math.round(src.width * sc), h = Math.round(src.height * sc);
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const c = cv.getContext('2d'); c.drawImage(src, 0, 0, w, h); drawFrame(c, w, h, PHOTO.opts);
+  const data = cv.toDataURL('image/jpeg', 0.9), flashEl = document.createElement('div'); flashEl.className = 'shutter'; document.body.appendChild(flashEl); setTimeout(() => flashEl.remove(), 450);
+  try { await IDB.put({ id: Date.now(), at: Date.now(), place: regionOf(S.p.x) + ' · ' + Math.round(S.p.y) + ' m', hour: ENV.hour, data }); flash('Saved to the photo album', 1.6); }
+  catch (e) { flash('Could not save the photo: ' + e.message, 2.5); }
+}
+function photoPanel() {
+  if (!PHOTO.panel) {
+    const el = document.createElement('div'); el.id = 'photoPanel'; document.body.appendChild(el); PHOTO.panel = el;
+    el.addEventListener('input', e => { const k = e.target.dataset.p; if (!k) return; const v = e.target.type === 'checkbox' ? e.target.checked : e.target.type === 'range' ? parseFloat(e.target.value) : e.target.value;
+      if (k === 'hour') { envSetTime(v); } else PHOTO.opts[k] = k === 'filter' ? +v : v;
+      const lab = el.querySelector(`[data-v="${k}"]`); if (lab) lab.textContent = k === 'focus' ? (v > 0 ? v + ' m' : 'auto') : k === 'hour' ? fmtH(v) : k === 'fov' ? Math.round(18 / Math.tan(v * Math.PI / 360)) + ' mm' : k === 'roll' ? v + '°' : (+v).toFixed(2);
+      if (k === 'frame' || k === 'caption') photoFrame(); });
+    el.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a;
+      if (a === 'take') photoTake(); if (a === 'exit') photoStop(); if (a === 'tl') (TL.on ? tlStop() : tlStart()); if (a === 'album') { photoStop(); showMenu('mAlbum'); } });
+  }
+  const o = PHOTO.opts, rng = (k, label, min, max, step, val, txt) => `<label><span>${label} <em data-v="${k}">${txt}</em></span><input type="range" data-p="${k}" min="${min}" max="${max}" step="${step}" value="${val}"></label>`;
+  PHOTO.panel.innerHTML = `<div class="ph"><b>📷 Photo mode</b><span>drag: orbit · wheel: zoom · W A S D Q E: move</span></div>
+    ${rng('fov', 'Lens', 12, 100, 1, o.fov, Math.round(18 / Math.tan(o.fov * Math.PI / 360)) + ' mm')}${rng('exp', 'Exposure', 0.4, 2, 0.05, o.exp, o.exp.toFixed(2))}
+    ${rng('dof', 'Depth of field', 0, 1, 0.05, o.dof, o.dof.toFixed(2))}${rng('focus', 'Focus distance', 0, 200, 1, o.focus, o.focus > 0 ? o.focus + ' m' : 'auto')}
+    ${rng('vig', 'Vignette', 0, 1, 0.05, o.vig, o.vig.toFixed(2))}${rng('roll', 'Tilt', -25, 25, 1, o.roll, o.roll + '°')}${rng('hour', 'Time of day', 5, 21, 0.05, ENV.hour, fmtH(ENV.hour))}
+    <label><span>Filter</span><select data-p="filter">${FILTERS.map((f, i) => `<option value="${i}" ${o.filter === i ? 'selected' : ''}>${f}</option>`).join('')}</select></label>
+    <label><span>Frame</span><select data-p="frame">${FRAMES.map(([k, n]) => `<option value="${k}" ${o.frame === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+    <label><span>Caption</span><input type="text" data-p="caption" maxlength="40" value="${escH(o.caption)}"></label>
+    <label class="chk"><input type="checkbox" data-p="hide" ${o.hide ? 'checked' : ''}><span>Hide the skier</span></label>
+    <div class="pb"><button data-a="take" class="primary">Take photo (Enter)</button><button data-a="tl">${TL.on ? 'Stop time-lapse' : 'Time-lapse'}</button><button data-a="album">Album</button><button data-a="exit">Exit (H)</button></div>`;
+  PHOTO.panel.style.display = 'block';
+}
+function photoKey(code) {
+  if (code === 'Escape' || code === 'KeyH') { photoStop(); return; }
+  if (code === 'Enter' || code === 'Space') { photoTake(); return; }
+  if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE'].includes(code)) keys[code] = true;
+}
+// time-lapse: the whole day from where the camera is, 30 game minutes per second
+function tlStart() { TL.on = true; TL.start = ENV.hour; TL.passed = 0; if (!TL.el) { TL.el = document.createElement('div'); TL.el.id = 'tlBadge'; document.body.appendChild(TL.el); } TL.el.style.display = 'block'; photoPanel(); }
+function tlStop() { TL.on = false; if (TL.el) TL.el.style.display = 'none'; if (PHOTO.on) photoPanel(); }
+function updateTL(dt) { if (!TL.on) return; TL.passed += dt * 0.5; TL.el.textContent = `⏱ Time-lapse · ${dayName().slice(0, 3)} ${fmtH(ENV.hour)} — click "Stop time-lapse" to end`; if (TL.passed >= 24) tlStop(); }
+// ---------- the photo album (stored in this browser) ----------
+const IDB = { db: null,
+  open() { return new Promise((res, rej) => { if (IDB.db) return res(IDB.db); const r = indexedDB.open('arosa-davos', 1); r.onupgradeneeded = () => r.result.createObjectStore('photos', { keyPath: 'id' }); r.onsuccess = () => res(IDB.db = r.result); r.onerror = () => rej(r.error); }); },
+  async tx(mode, fn) { const db = await IDB.open(); return new Promise((res, rej) => { const t = db.transaction('photos', mode), s = t.objectStore('photos'), out = fn(s); t.oncomplete = () => res(out && out.result !== undefined ? out.result : out); t.onerror = () => rej(t.error); }); },
+  put(v) { return IDB.tx('readwrite', s => s.put(v)); }, del(id) { return IDB.tx('readwrite', s => s.delete(id)); }, all() { return IDB.tx('readonly', s => s.getAll()); } };
+async function buildAlbum() {
+  const root = $('albumBody'); if (!root) return; root.innerHTML = '<div style="opacity:.7">Loading…</div>';
+  let list = []; try { list = (await IDB.all()).sort((a, b) => b.at - a.at); } catch (e) { root.innerHTML = 'The album is not available in this browser.'; return; }
+  root.innerHTML = list.length ? `<div class="agrid">${list.map(p => `<button class="athumb" data-id="${p.id}"><img src="${p.data}" alt=""><span>${escH(p.place)} · ${new Date(p.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span></button>`).join('')}</div>`
+    : '<div class="cd" style="opacity:.8">No photos yet. Press <b>H</b> while skiing for photo mode, then <b>Enter</b> to take a picture.</div>';
+  root.querySelectorAll('.athumb').forEach(b => b.onclick = () => { const p = list.find(q => q.id === +b.dataset.id); if (!p) return;
+    root.innerHTML = `<div class="aview"><img src="${p.data}" alt=""><div class="cd">${escH(p.place)} · ${new Date(p.at).toLocaleString('en-GB')}</div><div style="display:flex;gap:8px;margin-top:8px"><button class="ghost" id="aBack">← All photos</button><a class="ghost abtn" download="arosa-davos-${p.id}.jpg" href="${p.data}">Download</a><button class="ghost" id="aDel">Delete</button></div></div>`;
+    $('aBack').onclick = buildAlbum; $('aDel').onclick = async () => { await IDB.del(p.id); buildAlbum(); }; });
+}
+// ---------- touch controls: a steering pad, buttons, optional tilt steering ----------
+const TOUCH = { on: false, steer: 0, el: null, tilt: false, t0: null, stickId: null };
+function setupTouch() {
+  if (!(matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window || QS.has('touch'))) return;
+  TOUCH.on = true; document.body.classList.add('touchui');
+  const el = document.createElement('div'); el.id = 'touch'; TOUCH.el = el;
+  const B = [['KeyW', 'Tuck'], ['KeyS', 'Brake'], ['KeyQ', 'Stop'], ['Space', 'Jump'], ['KeyE', 'Lift'], ['KeyR', 'Get up'], ['KeyC', 'Cam'], ['KeyM', 'Map'], ['KeyV', 'Replay'], ['KeyH', 'Photo'], ['Escape', 'Menu']];
+  el.innerHTML = `<div class="tstick"><div class="tknob"></div><span>steer</span></div><button class="ttilt">Tilt steering: off</button><div class="tbtns">${B.map(([k, n]) => `<button data-k="${k}">${n}</button>`).join('')}</div>`;
+  document.body.appendChild(el);
+  const st = el.querySelector('.tstick'), knob = el.querySelector('.tknob');
+  const move = e => { const r = st.getBoundingClientRect(), dx = clamp((e.clientX - (r.left + r.width / 2)) / (r.width / 2 - 20), -1, 1); TOUCH.steer = -dx; knob.style.transform = `translateX(${dx * (r.width / 2 - 30)}px)`; };
+  st.addEventListener('pointerdown', e => { TOUCH.stickId = e.pointerId; st.setPointerCapture(e.pointerId); move(e); initAudio(); });
+  st.addEventListener('pointermove', e => { if (e.pointerId === TOUCH.stickId) move(e); });
+  const end = e => { if (e.pointerId !== TOUCH.stickId) return; TOUCH.stickId = null; if (!TOUCH.tilt) TOUCH.steer = 0; knob.style.transform = ''; };
+  st.addEventListener('pointerup', end); st.addEventListener('pointercancel', end);
+  el.querySelectorAll('[data-k]').forEach(b => {
+    const k = b.dataset.k, up = () => { keys[k] = false; b.classList.remove('on'); };
+    b.addEventListener('pointerdown', e => { e.preventDefault(); b.setPointerCapture(e.pointerId); b.classList.add('on'); initAudio(); if (k === 'Escape' || !isMenuOpen()) { keys[k] = true; keyPress(k); } });
+    b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up);
+  });
+  el.querySelector('.ttilt').onclick = async () => {
+    if (!TOUCH.tilt && window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) { try { if (await DeviceOrientationEvent.requestPermission() !== 'granted') return; } catch (e) { return; } }
+    TOUCH.tilt = !TOUCH.tilt; TOUCH.t0 = null; if (!TOUCH.tilt) TOUCH.steer = 0; el.querySelector('.ttilt').textContent = 'Tilt steering: ' + (TOUCH.tilt ? 'on' : 'off');
+  };
+  addEventListener('deviceorientation', e => {
+    if (!TOUCH.tilt || TOUCH.stickId !== null) return;
+    const ang = (screen.orientation && screen.orientation.angle) || 0, v = ang === 90 ? e.beta : ang === 270 || ang === -90 ? -e.beta : e.gamma;
+    if (v == null) return; if (TOUCH.t0 === null) TOUCH.t0 = v; TOUCH.steer = clamp(-(v - TOUCH.t0) / 22, -1, 1);
+  });
+}
+setupTouch();
+function updateTouchUI() { if (TOUCH.el) TOUCH.el.style.display = gameStarted && !isMenuOpen() && !REPLAY.on && !PHOTO.on ? '' : 'none'; }
+// ---------- per-frame glue ----------
+function updatePhotoTour(dt) { updateTours(dt); updateTL(dt); updateTouchUI(); updatePuffPool(dt); }
 
 // ================= animation =================
 // Poses are driven by the physics (sideways acceleration -> inclination, load -> knee flex, vertical
@@ -5378,7 +5686,7 @@ function animate(dt) {
   if (boardMesh) { boardMesh.visible = board; boardMesh.rotation.set(0, 0, -S.edge * 0.32); }
   rig.legs.forEach(l => l.skiG.visible = showSkis); rig.arms.forEach(a => a.pole.visible = showSkis && !EQ().board);
   carried.visible = (S.onFoot && S.mode === 'ski') || inCab;
-  rig.root.visible = camMode !== 1;
+  rig.root.visible = camMode !== 1 && !(PHOTO.on && PHOTO.opts.hide);
   updatePlayerCarrier();
 }
 const basisM = new THREE.Matrix4();
@@ -5483,11 +5791,12 @@ addEventListener('pointerup', () => dragging = false);
 addEventListener('pointermove', e => { if (!dragging) return; const k = settings.sens; orbitYaw -= (e.clientX - lastMX) * 0.005 * k; orbitPitch = clamp(orbitPitch + (e.clientY - lastMY) * 0.004 * k, -0.2, 1.3); lastMX = e.clientX; lastMY = e.clientY; });
 let camDistT = camDist;
 const ZOOM_MIN = 2.5, ZOOM_MAX = 150;
-$('gl').addEventListener('wheel', e => { camDistT = clamp(camDistT * (1 + Math.sign(e.deltaY) * 0.12), WARD.on ? 0.9 : ZOOM_MIN, ZOOM_MAX); }, { passive: true });
+$('gl').addEventListener('wheel', e => { camDistT = clamp(camDistT * (1 + Math.sign(e.deltaY) * 0.12), WARD.on || PHOTO.on ? 0.9 : ZOOM_MIN, ZOOM_MAX); }, { passive: true });
 addEventListener('keydown', e => { if (e.code === 'PageUp' || e.code === 'PageDown') e.preventDefault(); });
 const _cv1 = new THREE.Vector3(), _cv2 = new THREE.Vector3();
 let shakeT = 0;
 function updateCamera(dt) {
+  if (PHOTO.on) { photoCam(dt); return; }
   if (REPLAY.on) { replayCam(dt); return; }
   if ((camMode === 3 || camMode === 4) && !WARD.on) { actionCam(dt); return; }
   if (keys.PageUp) camDistT = clamp(camDistT * Math.exp(-dt * 1.6), ZOOM_MIN, ZOOM_MAX);
@@ -5755,7 +6064,7 @@ const _sunv = new THREE.Vector3(), _c1 = new THREE.Color(), _c2 = new THREE.Colo
 const SKY = { dayTop: new THREE.Color('#3f7fc8'), dayBot: new THREE.Color('#dce8f4'), setTop: new THREE.Color('#38558f'), setBot: new THREE.Color('#f2b27e'), nightTop: new THREE.Color('#040814'), nightBot: new THREE.Color('#122038'), grayTop: new THREE.Color('#9aa4b0'), grayBot: new THREE.Color('#d3d8de') };
 function envSetTime(h) { ENV.hour = ((h % 24) + 24) % 24; }
 function updateEnv(dt) {
-  const rate = TSPEED[settings.timeSpeed] ?? TSPEED.x20;
+  const rate = TL.on ? 0.5 : TSPEED[settings.timeSpeed] ?? TSPEED.x20;
   const dh = dt * rate; ENV.hour += dh;
   if (ENV.hour >= 24) { ENV.hour -= 24; ENV.day++; rollDanger(); }
   // weather: fixed from the settings, or a slow Markov chain
@@ -5787,7 +6096,7 @@ function updateEnv(dt) {
   scene.fog.density = v * (1 + ENV.snowRate * 5 + ENV.cloud * 0.6) * (below ? 7 : 1);
   renderer.toneMappingExposure = (settings.graphics === 'realistic' ? 0.58 : 0.88) * (0.75 + 0.25 * dayF) + ENV.night * 0.25;
   fogSea.visible = ENV.fogSea > 0.02; fogSea.material.uniforms.op.value = 0.92 * ENV.fogSea; fogSea.position.set(camera.position.x, 1650, camera.position.z);
-  clouds.visible = ENV.cloud > 0.05; clouds.material.uniforms.cover.value = ENV.cloud; clouds.material.uniforms.t.value += dt * 0.004; clouds.material.uniforms.light.value = 0.25 + 0.75 * dayF;
+  clouds.visible = ENV.cloud > 0.05; clouds.material.uniforms.cover.value = ENV.cloud; clouds.material.uniforms.t.value += dt * 0.004 * (TL.on ? 40 : 1); clouds.material.uniforms.light.value = 0.25 + 0.75 * dayF;
   clouds.position.copy(camera.position); clouds.position.y = 4200;
   ENV.cloud = _cl0; cloudLayerApply();
   if (facadeUniforms.night) facadeUniforms.night.value = ENV.night;
@@ -5881,6 +6190,7 @@ function updateRealistic() {
   GFX.grade.uniforms.sat.value = 1.1 - ENV.cloud * 0.15;
 }
 function renderFrame() {
+  if (PHOTO.on) { photoRender(); return; }
   if (camMode === 4 && !WARD.on && !REPLAY.on && !isMenuOpen()) { fishRender(); return; }
   if (GFX.on) { updateRealistic(); GFX.composer.render(); }
   else { sky.visible = true; renderer.render(scene, camera); }
@@ -5956,7 +6266,7 @@ function showMenu(page = 'mMain', paused = true) {
   for (const k in keys) keys[k] = false;
 }
 function hideMenu() { wardToggle(false); const m = $('menu'); m.classList.remove('open', 'show'); clearTimeout(window._menuT); window._menuT = setTimeout(() => { if (!m.classList.contains('open')) m.style.display = 'none'; }, 220); window.__game.paused = false; initAudio(); }
-function showPage(id) { for (const p of document.querySelectorAll('.mpage')) p.style.display = p.id === id ? '' : 'none'; wardToggle(id === 'mWard'); if (id === 'mProfile' || id === 'mMain') buildProfiles(); }
+function showPage(id) { for (const p of document.querySelectorAll('.mpage')) p.style.display = p.id === id ? '' : 'none'; wardToggle(id === 'mWard'); if (id === 'mProfile' || id === 'mMain') buildProfiles(); if (id === 'mAlbum') buildAlbum(); }
 document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => { initAudio(); showPage(b.dataset.go); }));
 $('mResume').addEventListener('click', hideMenu);
 let gameStarted = false;
@@ -6185,6 +6495,7 @@ function drawBigMap() {
   if (MV.s > 0.25) { c.fillStyle = '#6e5b4c'; for (const b of buildings) if (!b.removed && vis(b.cx, b.cz)) { path(b.pts); c.closePath(); c.fill(); } }
   const lw = clamp(MV.s * 10, 1.5, 7) * dpr;
   for (const p of pistes) { if (p.a) continue; if (!p.w.some(([x, z]) => vis(x, z, 400))) continue; path(p.w); c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = lw + 2 * dpr; c.stroke(); c.strokeStyle = diffOf(p.d).col; c.lineWidth = lw; if (!isGroomed(p)) c.setLineDash([6 * dpr, 5 * dpr]); c.stroke(); c.setLineDash([]); }
+  drawTourRoutes(c, sx, sz, Math.max(2, lw * 0.6), (x, z) => vis(x, z, 300));
   for (const l of lifts) { path(l.nodes.map(n => [n.x, n.z])); c.strokeStyle = '#111'; c.lineWidth = 1.6 * dpr; c.setLineDash([7 * dpr, 4 * dpr]); c.stroke(); c.setLineDash([]); }
   const label = (txt, x, y, font, fill = '#111') => { c.font = font; c.lineWidth = 3 * dpr; c.strokeStyle = 'rgba(255,255,255,.9)'; c.strokeText(txt, x, y); c.fillStyle = fill; c.fillText(txt, x, y); };
   c.textAlign = 'center'; c.textBaseline = 'middle';
@@ -6237,6 +6548,7 @@ function buildTeleportMenu() {
     for (const c of RACES.list) { const b = document.createElement('button'), best = raceDB()[c.id]; b.innerHTML = '<span>' + esc(c.name) + '</span><span>' + Math.round(c.y0) + ' m' + (best ? ' · best ' + fmtT(best.time) : '') + '</span>'; b.onclick = () => { raceGoto(c); $('tele').style.display = 'none'; }; col.appendChild(b); }
     cols.appendChild(col); cols.style.gridTemplateColumns = 'repeat(auto-fit, minmax(220px, 1fr))';
   }
+  if (cols) tourMenuColumn(cols);
 }
 let hudT = 0;
 function updateHud(dt) {
@@ -6311,14 +6623,14 @@ addEventListener('resize', resize);
   await stage('Erecting pylons, stations and ropes…', 80);
   buildLiftStatics(); buildCarriers(); buildLandmarks(); buildParkMeshes();
   await stage('Planting piste markers and forests…', 88);
-  buildClearMask(); buildPisteDetails(); buildSigns(); buildRaces(); finalizeChunks();
+  buildClearMask(); buildPisteDetails(); buildSigns(); buildTours(); buildRaces(); finalizeChunks();
   buildFar(); buildNearGeometry(); buildTreeMesh(); buildAI(); buildCats(); buildAvalanche(); rollDanger(); buildGearVisuals(); buildWindFx(); buildWells();
   await stage('Drawing the map…', 95);
   buildMapCanvas(); buildTeleportMenu(); buildStartMenu(); buildSettingsMenu(); buildProfiles(); resize(); applySettings();
   const start = lifts.find(l => /Weisshornbahn 2/.test(l.name)) || lifts.sort((a, b) => b.top.y - a.top.y)[0];
   teleportTop(start); $('msg').style.display = 'none'; msgT = 0;
   camPos.copy(S.p).add(new THREE.Vector3(0, 30, -30));
-  Object.assign(window.__game, { RACES, RESCUE, QUALITY, FPS, WARD, REPLAY, TIME, replayStart, replayStop, busyNow, dayName, SKISNOW, HEADL, CLOUDL, FAT, WIND, AI, SNOWYU, PAD, RUN, CTL, iceAt, setOrbit: (y, p) => { orbitYaw = y; if (p !== undefined) orbitPitch = p; }, raceGoto, rescueBegin, coursePoint, projectCourse, POW, powderDepthAt, ENV, EQ, settings: () => settings });
+  Object.assign(window.__game, { RACES, RESCUE, QUALITY, FPS, WARD, QUEUE, PHOTO, TOUR, TL, TOUCH, PP, photoStart, photoStop, photoTake, tourStart, buildAlbum, REPLAY, TIME, replayStart, replayStop, busyNow, dayName, SKISNOW, HEADL, CLOUDL, FAT, WIND, AI, SNOWYU, PAD, RUN, CTL, iceAt, setOrbit: (y, p) => { orbitYaw = y; if (p !== undefined) orbitPitch = p; }, raceGoto, rescueBegin, coursePoint, projectCourse, POW, powderDepthAt, ENV, EQ, settings: () => settings });
   $('loading').style.display = 'none';
   showMenu('mMain'); $('mMain').querySelector('[data-go="mStart"]').classList.add('primary');
   let last = performance.now(), clock = 0, physAcc = 0;
@@ -6329,7 +6641,7 @@ addEventListener('resize', resize);
     pollPad(dt); updatePowder(dt);
     if (!window.__game.paused) { physAcc += dt; let k = 0; const h = 1 / PHYS.hz; while (physAcc >= h && k++ < 30) { step(h); physAcc -= h; } if (k >= 30) physAcc = 0; }
     updateNear(S.p.x, S.p.z);
-    if (REPLAY.on) replayFrame(dt); else animate(dt); syncBody(); updateSpray(dt); updateTracks(); updateTreeShadows(dt); updateFlakes(dt); updateAudio(); updateSounds(dt); updateGearFrame(dt); updateMore(dt); updatePolish(dt);
+    if (REPLAY.on) replayFrame(dt); else animate(dt); syncBody(); updateSpray(dt); updateTracks(); updateTreeShadows(dt); updateFlakes(dt); updateAudio(); updateSounds(dt); updateGearFrame(dt); updateMore(dt); updatePolish(dt); updatePhotoTour(dt);
     updateEnv(dt); saveTick(dt); if (liftsRunning()) liftClock += dt;
     updateAI(dt); updateCats(dt); updateAvalanche(dt); updateLandmarks(dt); updateRace(dt); updateRescue(dt); fpsTick(dt);
     updateCarriers(liftClock, dt);

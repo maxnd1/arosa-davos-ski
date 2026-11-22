@@ -26,6 +26,9 @@ A browser ski game set in a 1:1 recreation of **Arosa Lenzerheide** (both sides 
 - Livelier skiing: the body rises and sinks through each turn, the upper body faces down the hill, the inside hand drives forward, the head looks into the turn and at things around you; a proper snowboard stance; smooth getting up
 - Spray that fits the snow (a sheet off a carve, clouds in powder, slush chunks, sparkle on ice), snow clumps on the skis, grooves that get deeper in soft snow, soft contact shadows under the skis
 - Each kind of ski and the board has its own sound; minimal HUD style and HUD size; smooth menu fades and a drawn loading screen with tips
+- Ski tours: 18 marked (pink) uphill routes from a lift to real summits (Älplihorn, Aroser Rothorn, Pischahorn, Weissflue ...) with a summit cross and a summit book that keeps your climbs and best times (T → Ski tours)
+- Photo mode (H): free camera, lens, exposure, depth of field, filters, tilt, time of day, postcard / instant photo / film / old print frames with your caption; photos go to an album in the main menu (download or delete them there); a time-lapse of the whole day
+- Touch controls on tablets and phones: a steering pad, buttons, and optional tilt steering
 - Quality presets (Low to Ultra) and a frame-rate counter (F3)
 - Standard or realistic graphics (physical sky, bloom, sharper shadows) in the settings; physically based snow with glinting crystals
 - Three.js renderer, no build step
@@ -77,6 +80,7 @@ It cuts the real ragdoll code out of `swiss-ski/index.html` and drops the body o
 | Backspace | restart the run |
 | V | replay of the last 30 s (Space pause, arrows skip, S slow motion, C camera, Enter save the clip) |
 | X (hold) | slow motion |
+| H | photo mode (Enter takes the picture) |
 | Page Up / Page Down, mouse wheel | zoom |
 | Mouse drag | orbit the camera |
 
