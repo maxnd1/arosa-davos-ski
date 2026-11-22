@@ -20,6 +20,12 @@ A browser ski game set in a 1:1 recreation of **Arosa Lenzerheide** (both sides 
 - Optional leg fatigue: rest on lifts, stand still or stop at a hut
 - Five cameras (C): follow, first person with goggle view, high, helmet cam, GoPro on a pole with fisheye; quick restart of the run (Backspace)
 - Gamepad (analog edging, triggers, rumble), steering feel presets and sliders, every key can be rebound (Settings), skier profiles with their own outfit, stats and best times, a compass bar and labels on the minimap
+- Replays (V): the last 30 seconds from cinematic cameras (tripod, chase, side, drone) with pause, skip and slow motion; save the best runs as clips
+- Slow motion: hold X, and big jumps and hard crashes slow down by themselves (can be switched off)
+- Busy weekends and middays, quiet weekday mornings, and skiers queuing at the lifts near you
+- Livelier skiing: the body rises and sinks through each turn, the upper body faces down the hill, the inside hand drives forward, the head looks into the turn and at things around you; a proper snowboard stance; smooth getting up
+- Spray that fits the snow (a sheet off a carve, clouds in powder, slush chunks, sparkle on ice), snow clumps on the skis, grooves that get deeper in soft snow, soft contact shadows under the skis
+- Each kind of ski and the board has its own sound; minimal HUD style and HUD size; smooth menu fades and a drawn loading screen with tips
 - Quality presets (Low to Ultra) and a frame-rate counter (F3)
 - Standard or realistic graphics (physical sky, bloom, sharper shadows) in the settings; physically based snow with glinting crystals
 - Three.js renderer, no build step
@@ -69,6 +75,8 @@ It cuts the real ragdoll code out of `swiss-ski/index.html` and drops the body o
 | M | map: scroll or + / − to zoom, drag to pan, click to drop in |
 | C | camera: follow, first person, high, helmet cam, GoPro (fisheye) |
 | Backspace | restart the run |
+| V | replay of the last 30 s (Space pause, arrows skip, S slow motion, C camera, Enter save the clip) |
+| X (hold) | slow motion |
 | Page Up / Page Down, mouse wheel | zoom |
 | Mouse drag | orbit the camera |
 
